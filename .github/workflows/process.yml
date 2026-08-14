@@ -1,0 +1,101 @@
+name: CodeStreak Process (Stats + Dashboard)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow is triggered by the browser extension AFTER it has already
+# committed the new solution to leetcode-journey via GitHub API.
+#
+# It does NOT fetch from LeetCode — no session cookies needed.
+# It only reads data/submissions.json and regenerates everything else.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      triggered_by:
+        description: "Who triggered this run"
+        required: false
+        default: "extension"
+
+permissions:
+  contents: write
+
+jobs:
+  process:
+    name: Process Stats + Regenerate Dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # ── 1. Checkout CodeStreak engine ────────────────────────────────────
+      - name: Checkout CodeStreak
+        uses: actions/checkout@v4
+        with:
+          path: codestreak
+          token: ${{ secrets.GH_TOKEN }}
+
+      # ── 2. Checkout leetcode-journey (target) ────────────────────────────
+      - name: Checkout leetcode-journey
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/leetcode-journey
+          path: leetcode-journey
+          token: ${{ secrets.GH_TOKEN }}
+
+      # ── 3. Set up Python ─────────────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: codestreak/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r codestreak/requirements.txt
+
+      # ── 4. Copy data from leetcode-journey into engine's data/ ───────────
+      - name: Sync data files
+        run: |
+          mkdir -p codestreak/data
+          cp -r leetcode-journey/data/. codestreak/data/
+          echo "Data files synced"
+          echo "Submissions: $(python3 -c "import json; d=json.load(open('codestreak/data/submissions.json')); print(len(d))")"
+
+      # ── 5. Run stats, streak, achievements, README, heatmap ──────────────
+      - name: Calculate statistics
+        run: cd codestreak && python scripts/calculate_stats.py
+
+      - name: Calculate streak
+        run: cd codestreak && python scripts/calculate_streak.py
+
+      - name: Update achievements
+        run: cd codestreak && python scripts/calculate_achievements.py
+
+      - name: Generate README dashboard
+        env:
+          TARGET_DIR: ${{ github.workspace }}/leetcode-journey
+        run: cd codestreak && python scripts/generate_readme.py
+
+      - name: Generate SVG charts
+        run: cd codestreak && python scripts/generate_heatmap.py
+
+      # ── 6. Copy outputs back to leetcode-journey ─────────────────────────
+      - name: Copy data + assets to leetcode-journey
+        run: |
+          cp -r codestreak/data/. leetcode-journey/data/
+          mkdir -p leetcode-journey/assets
+          cp -r codestreak/assets/. leetcode-journey/assets/
+
+      # ── 7. Commit and push ───────────────────────────────────────────────
+      - name: Commit and push to leetcode-journey
+        run: |
+          cd leetcode-journey
+          git config user.name  "CodeStreak Bot"
+          git config user.email "codestreak-bot@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "📊 CodeStreak: update stats + dashboard"
+            git push
+            echo "Dashboard updated!"
+          fi

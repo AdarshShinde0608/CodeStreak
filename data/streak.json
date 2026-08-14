@@ -1,0 +1,11 @@
+{
+  "currentStreak": 0,
+  "longestStreak": 0,
+  "lastSolvedDate": null,
+  "streakStartDate": null,
+  "dailyActivity": {},
+  "totalActiveDays": 0,
+  "dailyGoalMet": false,
+  "weeklyGoalMet": false,
+  "generatedAt": null
+}

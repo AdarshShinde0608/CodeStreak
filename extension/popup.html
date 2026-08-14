@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeStreak</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="popup">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <span class="logo-icon">🔥</span>
+        <div>
+          <div class="logo-name">CodeStreak</div>
+          <div class="logo-sub">LeetCode → GitHub Sync</div>
+        </div>
+      </div>
+      <div class="status-pill" id="statusPill">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">Checking…</span>
+      </div>
+    </header>
+
+    <!-- Stats bar (shown when configured) -->
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat">
+        <div class="stat-value" id="statSynced">—</div>
+        <div class="stat-label">Synced</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value" id="statStreak">—</div>
+        <div class="stat-label">Streak</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-value" id="statLast">—</div>
+        <div class="stat-label">Last Sync</div>
+      </div>
+    </div>
+
+    <!-- Last synced problem card -->
+    <div class="last-problem" id="lastProblem" style="display:none">
+      <div class="last-problem-label">Last synced</div>
+      <div class="last-problem-title" id="lastProblemTitle"></div>
+      <div class="last-problem-meta">
+        <span class="badge" id="lastProblemDiff"></span>
+        <span class="badge badge-lang" id="lastProblemLang"></span>
+      </div>
+    </div>
+
+    <!-- Settings form -->
+    <form class="settings" id="settingsForm" autocomplete="off">
+      <div class="section-label">GitHub Settings</div>
+
+      <div class="field">
+        <label for="githubToken">Personal Access Token</label>
+        <div class="input-wrap">
+          <input
+            type="password"
+            id="githubToken"
+            name="githubToken"
+            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+            spellcheck="false"
+          />
+          <button type="button" class="reveal-btn" id="revealBtn" title="Show/hide token">👁</button>
+        </div>
+        <div class="field-hint">
+          Needs <code>repo</code> + <code>workflow</code> scope.
+          <a href="https://github.com/settings/tokens/new" target="_blank">Create token ↗</a>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="githubUsername">GitHub Username</label>
+        <input type="text" id="githubUsername" name="githubUsername" placeholder="your-username" />
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="targetRepo">Solutions Repo</label>
+          <input type="text" id="targetRepo" name="targetRepo" placeholder="leetcode-journey" />
+        </div>
+        <div class="field">
+          <label for="engineRepo">Engine Repo</label>
+          <input type="text" id="engineRepo" name="engineRepo" placeholder="CodeStreak" />
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:14px">Preferences</div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Auto-sync on Accept</div>
+          <div class="toggle-hint">Sync immediately when LeetCode accepts</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="autoSync" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="toggle-row">
+        <div>
+          <div class="toggle-label">Show Notifications</div>
+          <div class="toggle-hint">Browser notification on each sync</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="showNotifications" checked />
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary" id="saveBtn">
+          Save Settings
+        </button>
+        <button type="button" class="btn btn-ghost" id="testBtn">
+          Test Connection
+        </button>
+      </div>
+    </form>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

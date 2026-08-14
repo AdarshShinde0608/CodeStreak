@@ -1,0 +1,51 @@
+name: CodeStreak Tests
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        run: |
+          python -m pytest tests/ -v \
+            --tb=short \
+            --cov=scripts \
+            --cov-report=term-missing
+
+      - name: Test import of all scripts
+        run: |
+          cd codestreak 2>/dev/null || true
+          python -c "import sys; sys.path.insert(0, 'scripts'); from calculate_streak import calculate_streak; print('✅ calculate_streak')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from calculate_stats import calculate_statistics; print('✅ calculate_stats')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from calculate_achievements import calculate_achievements; print('✅ calculate_achievements')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from process_submission import slugify_folder; print('✅ process_submission')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from leetcode_adapter import get_extension; print('✅ leetcode_adapter')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from generate_heatmap import generate_all; print('✅ generate_heatmap')"
+          python -c "import sys; sys.path.insert(0, 'scripts'); from generate_readme import generate_readme; print('✅ generate_readme')"

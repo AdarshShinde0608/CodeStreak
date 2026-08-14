@@ -1,0 +1,32 @@
+# CodeStreak Configuration
+
+# ──────────────────────────────────────────────────────────────
+# Timezone for streak calculation (IANA timezone name)
+# Default: Asia/Kolkata (IST, UTC+5:30)
+# ──────────────────────────────────────────────────────────────
+timezone: Asia/Kolkata
+
+# ──────────────────────────────────────────────────────────────
+# Daily / Weekly Goals
+# ──────────────────────────────────────────────────────────────
+daily_goal: 1
+weekly_goal: 7
+
+# ──────────────────────────────────────────────────────────────
+# GitHub details (used by README generator)
+# ──────────────────────────────────────────────────────────────
+github_username: your-username
+repo_name: your-repo-name
+
+# ──────────────────────────────────────────────────────────────
+# LeetCode fetch settings
+# ──────────────────────────────────────────────────────────────
+# How many recent submissions to fetch per sync run
+fetch_limit: 20
+
+# ──────────────────────────────────────────────────────────────
+# AI layer (optional)
+# Set ai_enabled: true and provide OPENAI_API_KEY secret to enable
+# ──────────────────────────────────────────────────────────────
+ai_enabled: false
+ai_provider: openai   # openai | gemini

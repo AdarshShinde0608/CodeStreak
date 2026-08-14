@@ -1,0 +1,103 @@
+name: CodeStreak Sync
+
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: "0 */4 * * *"
+
+  # Allow manual trigger from GitHub Actions UI
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    name: Sync LeetCode → GitHub
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Checkout CodeStreak (automation engine) ───────────────────────
+      - name: Checkout CodeStreak
+        uses: actions/checkout@v4
+        with:
+          path: codestreak
+          token: ${{ secrets.GH_TOKEN }}
+
+      # ── 2. Checkout leetcode-journey (target solutions repo) ─────────────
+      - name: Checkout leetcode-journey
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/leetcode-journey
+          path: leetcode-journey
+          token: ${{ secrets.GH_TOKEN }}
+
+      # ── 3. Set up Python ─────────────────────────────────────────────────
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: codestreak/requirements.txt
+
+      # ── 4. Install dependencies ──────────────────────────────────────────
+      - name: Install dependencies
+        run: pip install -r codestreak/requirements.txt
+
+      # ── 5. Copy data files from target repo into CodeStreak data/ ────────
+      #    This ensures the engine sees the current state of the data
+      - name: Sync data files from leetcode-journey
+        run: |
+          mkdir -p codestreak/data
+          if [ -d "leetcode-journey/data" ]; then
+            cp -r leetcode-journey/data/. codestreak/data/
+            echo "Copied data files from leetcode-journey"
+          else
+            echo "No data directory in leetcode-journey yet, using defaults"
+          fi
+
+      # ── 6. Run the sync pipeline ─────────────────────────────────────────
+      - name: Run CodeStreak pipeline
+        env:
+          LEETCODE_SESSION:    ${{ secrets.LEETCODE_SESSION }}
+          LEETCODE_CSRF_TOKEN: ${{ secrets.LEETCODE_CSRF_TOKEN }}
+          TARGET_DIR:          ${{ github.workspace }}/leetcode-journey
+        run: |
+          cd codestreak
+          python scripts/main.py --verbose
+
+      # ── 7. Copy outputs back to leetcode-journey ─────────────────────────
+      - name: Copy solutions and assets to leetcode-journey
+        run: |
+          # Copy updated data files
+          cp -r codestreak/data/. leetcode-journey/data/
+
+          # Copy solutions (new folders only, don't overwrite manually edited READMEs)
+          rsync -av --ignore-existing codestreak/solutions/. leetcode-journey/solutions/ 2>/dev/null || \
+          cp -rn codestreak/solutions/. leetcode-journey/solutions/
+
+          # Copy assets (SVG charts)
+          mkdir -p leetcode-journey/assets
+          cp -r codestreak/assets/. leetcode-journey/assets/
+
+          echo "Files synced to leetcode-journey"
+
+      # ── 8. Commit and push to leetcode-journey ───────────────────────────
+      - name: Commit and push to leetcode-journey
+        run: |
+          cd leetcode-journey
+
+          git config user.name  "CodeStreak Bot"
+          git config user.email "codestreak-bot@users.noreply.github.com"
+
+          git add -A
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+            git commit -m "🤖 CodeStreak sync — ${TIMESTAMP}"
+            git push
+            echo "Changes pushed to leetcode-journey"
+          fi

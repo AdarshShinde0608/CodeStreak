@@ -1,0 +1,18 @@
+{
+  "unlocked": [],
+  "locked": [
+    {"id": "first_problem",    "title": "First Problem",    "emoji": "🎯", "description": "Solve your first problem",        "type": "problems", "threshold": 1},
+    {"id": "problems_10",      "title": "10 Problems",      "emoji": "🏆", "description": "Solve 10 problems",               "type": "problems", "threshold": 10},
+    {"id": "problems_25",      "title": "25 Problems",      "emoji": "🏆", "description": "Solve 25 problems",               "type": "problems", "threshold": 25},
+    {"id": "problems_50",      "title": "50 Problems",      "emoji": "🏆", "description": "Solve 50 problems",               "type": "problems", "threshold": 50},
+    {"id": "problems_100",     "title": "100 Problems",     "emoji": "🏆", "description": "Solve 100 problems",              "type": "problems", "threshold": 100},
+    {"id": "problems_250",     "title": "250 Problems",     "emoji": "🏆", "description": "Solve 250 problems",              "type": "problems", "threshold": 250},
+    {"id": "problems_500",     "title": "500 Problems",     "emoji": "🏆", "description": "Solve 500 problems",              "type": "problems", "threshold": 500},
+    {"id": "problems_1000",    "title": "1000 Problems",    "emoji": "🏆", "description": "Solve 1000 problems",             "type": "problems", "threshold": 1000},
+    {"id": "streak_7",         "title": "Week Warrior",     "emoji": "🔥", "description": "Maintain a 7-day streak",         "type": "streak",   "threshold": 7},
+    {"id": "streak_30",        "title": "Month Master",     "emoji": "🔥", "description": "Maintain a 30-day streak",        "type": "streak",   "threshold": 30},
+    {"id": "streak_100",       "title": "Century Coder",    "emoji": "🔥", "description": "Maintain a 100-day streak",       "type": "streak",   "threshold": 100},
+    {"id": "streak_365",       "title": "Year of Code",     "emoji": "🔥", "description": "Maintain a 365-day streak",       "type": "streak",   "threshold": 365}
+  ],
+  "generatedAt": null
+}
