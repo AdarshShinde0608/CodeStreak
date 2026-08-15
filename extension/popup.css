@@ -16,6 +16,8 @@
   --accent-2:    #ff9a3c;
   --green:       #3fb950;
   --blue:        #58a6ff;
+  --red:         #f85149;
+  --yellow:      #e3b341;
   --radius:      10px;
   --radius-sm:   6px;
 }
@@ -48,7 +50,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 16px 12px;
+  padding: 14px 16px 12px;
   background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -63,7 +65,7 @@ body {
 }
 
 .logo-icon {
-  font-size: 28px;
+  font-size: 26px;
   filter: drop-shadow(0 0 8px rgba(247,129,102,0.6));
   animation: flicker 3s ease-in-out infinite;
 }
@@ -114,12 +116,283 @@ body {
   animation: pulse 2s ease-in-out infinite;
 }
 
-.status-dot.error { background: #f85149; }
-.status-dot.warning { background: #e3b341; }
+.status-dot.error { background: var(--red); }
+.status-dot.warning { background: var(--yellow); }
 
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 6px var(--green); }
   50%       { box-shadow: 0 0 12px var(--green); }
+}
+
+/* ── LeetCode Banner ────────────────────────────────────────────────────────── */
+.lc-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(88, 166, 255, 0.06);
+  border-bottom: 1px solid var(--border);
+}
+
+.lc-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lc-icon { font-size: 16px; }
+
+.lc-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.lc-status {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.lc-status.online { color: var(--green); }
+.lc-status.offline { color: var(--yellow); }
+
+.lc-link-btn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue);
+  text-decoration: none;
+  background: var(--surface2);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.lc-link-btn:hover { background: var(--surface); text-decoration: underline; }
+
+/* ── Sync Hub ───────────────────────────────────────────────────────────────── */
+.sync-hub {
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sync-hub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sync-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--green);
+  background: rgba(63, 185, 80, 0.12);
+  padding: 2px 7px;
+  border-radius: 12px;
+  border: 1px solid rgba(63, 185, 80, 0.25);
+}
+
+.sync-hub-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.sync-btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-sync {
+  flex: 3;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(247,129,102,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.btn-sync:hover {
+  box-shadow: 0 4px 14px rgba(247,129,102,0.5);
+  transform: translateY(-1px);
+}
+
+.btn-sync:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-logs {
+  flex: 1;
+  padding: 9px 8px;
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-logs:hover { background: var(--border); }
+
+/* Progress box */
+.sync-progress-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+}
+
+.sync-progress-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sync-progress-text {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Submissions Log Panel ─────────────────────────────────────────────────── */
+.submissions-log-panel {
+  padding: 10px 16px;
+  background: #090d13;
+  border-bottom: 1px solid var(--border);
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.close-log-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+.close-log-btn:hover { color: var(--text); }
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 170px;
+  padding-right: 2px;
+}
+
+.log-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.log-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  max-width: 220px;
+}
+
+.log-item-title {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.log-item-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.log-status-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.log-status-badge.synced {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--green);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+}
+
+.log-status-badge.accepted {
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+}
+
+.log-status-badge.other {
+  background: rgba(248, 81, 73, 0.12);
+  color: var(--red);
+  border: 1px solid rgba(248, 81, 73, 0.25);
 }
 
 /* ── Stats bar ──────────────────────────────────────────────────────────────── */
@@ -133,18 +406,18 @@ body {
 .stat {
   flex: 1;
   text-align: center;
-  padding: 10px 8px;
+  padding: 8px 6px;
 }
 
 .stat-value {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--accent);
   line-height: 1;
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -153,13 +426,13 @@ body {
 
 .stat-divider {
   width: 1px;
-  height: 32px;
+  height: 28px;
   background: var(--border);
 }
 
 /* ── Last problem card ──────────────────────────────────────────────────────── */
 .last-problem {
-  margin: 12px 16px 0;
+  margin: 10px 16px 4px;
   padding: 10px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -167,7 +440,7 @@ body {
 }
 
 .last-problem-label {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -175,7 +448,7 @@ body {
 }
 
 .last-problem-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
   margin-bottom: 6px;
@@ -184,7 +457,7 @@ body {
 .last-problem-meta { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .badge {
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 20px;
   font-size: 10px;
   font-weight: 600;
@@ -198,22 +471,40 @@ body {
 .badge.Hard   { background: rgba(248,81,73,0.15);   color: #f85149; border-color: rgba(248,81,73,0.3); }
 .badge-lang   { background: rgba(88,166,255,0.15); color: var(--blue); border-color: rgba(88,166,255,0.3); }
 
-/* ── Settings form ──────────────────────────────────────────────────────────── */
+/* ── Settings Accordion ─────────────────────────────────────────────────────── */
+.settings-accordion {
+  padding: 10px 16px 14px;
+}
+
+.accordion-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.accordion-toggle:hover { background: var(--surface); }
+
+.accordion-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
 .settings {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px 16px;
-}
-
-.section-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-soft);
+  padding-top: 12px;
 }
 
 .field {
@@ -223,13 +514,13 @@ body {
 }
 
 .field label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text);
 }
 
 .field-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -287,7 +578,7 @@ input[type="password"] {
   color: var(--text);
   font-family: inherit;
   font-size: 12px;
-  padding: 7px 10px;
+  padding: 6px 10px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -309,13 +600,13 @@ input::placeholder { color: var(--text-muted); }
 }
 
 .toggle-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text);
 }
 
 .toggle-hint {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -324,11 +615,11 @@ input::placeholder { color: var(--text-muted); }
 
 .toggle-track {
   display: block;
-  width: 38px;
-  height: 22px;
+  width: 34px;
+  height: 20px;
   background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 10px;
   transition: background 0.2s, border-color 0.2s;
   position: relative;
 }
@@ -337,8 +628,8 @@ input::placeholder { color: var(--text-muted); }
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: var(--text-muted);
   border-radius: 50%;
   transition: transform 0.2s, background 0.2s;
@@ -351,7 +642,7 @@ input::placeholder { color: var(--text-muted); }
 
 .toggle input:checked + .toggle-track .toggle-thumb {
   background: var(--green);
-  transform: translateX(16px);
+  transform: translateX(14px);
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────────── */
@@ -363,10 +654,10 @@ input::placeholder { color: var(--text-muted); }
 
 .btn {
   flex: 1;
-  padding: 8px 14px;
+  padding: 7px 12px;
   border-radius: var(--radius-sm);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid transparent;
@@ -377,16 +668,12 @@ input::placeholder { color: var(--text-muted); }
 .btn-primary {
   background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
   color: #fff;
-  border-color: transparent;
   box-shadow: 0 2px 8px rgba(247,129,102,0.3);
 }
 
 .btn-primary:hover {
   box-shadow: 0 4px 14px rgba(247,129,102,0.45);
-  transform: translateY(-1px);
 }
-
-.btn-primary:active { transform: translateY(0); }
 
 .btn-ghost {
   background: var(--surface);
@@ -409,8 +696,8 @@ input::placeholder { color: var(--text-muted); }
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: 12px;
+  padding: 8px 14px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text);
   white-space: nowrap;
@@ -426,4 +713,4 @@ input::placeholder { color: var(--text-muted); }
 }
 
 .toast.success { border-color: var(--green); color: var(--green); }
-.toast.error   { border-color: #f85149;       color: #f85149; }
+.toast.error   { border-color: var(--red);   color: var(--red); }

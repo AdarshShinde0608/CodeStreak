@@ -293,22 +293,18 @@ class TestCalculateStreakIntegration:
         assert result["totalActiveDays"] == 0
 
     def test_today_single_submission(self):
-        today_ist = self._today_ist()
-        # Submit at 06:00 UTC on today-IST (which is 11:30 IST)
-        # Ensure it maps to today in IST
-        today_utc_start = datetime.combine(today_ist, datetime.min.time()).replace(tzinfo=timezone.utc)
-        mid_day = today_utc_start.replace(hour=6)
+        # Submit 5 minutes ago in UTC
+        recent_utc = datetime.now(timezone.utc) - timedelta(minutes=5)
 
-        subs = [make_submission("two-sum", mid_day)]
+        subs = [make_submission("two-sum", recent_utc)]
         result = calculate_streak(subs, tz_name="Asia/Kolkata", daily_goal=1)
         assert result["currentStreak"] == 1
         assert result["longestStreak"] == 1
         assert result["dailyGoalMet"] is True
 
     def test_daily_goal_not_met(self):
-        today_ist = self._today_ist()
-        today_utc = datetime.combine(today_ist, datetime.min.time()).replace(tzinfo=timezone.utc).replace(hour=6)
-        subs = [make_submission("p1", today_utc)]
+        recent_utc = datetime.now(timezone.utc) - timedelta(minutes=5)
+        subs = [make_submission("p1", recent_utc)]
         result = calculate_streak(subs, tz_name="Asia/Kolkata", daily_goal=3)
         assert result["todaySolved"] == 1
         assert result["dailyGoalMet"] is False

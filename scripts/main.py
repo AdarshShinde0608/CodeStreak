@@ -64,18 +64,31 @@ def run_pipeline(dry_run: bool = False) -> None:
     logger.info("STEP 1: Fetching new submissions from LeetCode")
     logger.info("=" * 60)
 
-    from fetch_submissions import fetch_new_submissions
-    new_submissions = fetch_new_submissions(fetch_limit=fetch_limit)
-    logger.info("New submissions found: %d", len(new_submissions))
+    import os
+    leetcode_session = os.environ.get("LEETCODE_SESSION", "").strip()
+    new_submissions = []
+    processed = 0
+
+    if not leetcode_session:
+        logger.info("ℹ️  LEETCODE_SESSION not set. Skipping direct LeetCode fetch.")
+        logger.info("    (Submissions are synced directly via the CodeStreak Browser Extension)")
+    else:
+        try:
+            from fetch_submissions import fetch_new_submissions
+            new_submissions = fetch_new_submissions(fetch_limit=fetch_limit)
+            logger.info("New submissions found: %d", len(new_submissions))
+        except Exception as exc:
+            logger.warning("Could not fetch remote submissions: %s", exc)
 
     # ── Step 2: Process submissions ───────────────────────────────────────────
-    logger.info("=" * 60)
-    logger.info("STEP 2: Processing submissions")
-    logger.info("=" * 60)
+    if new_submissions:
+        logger.info("=" * 60)
+        logger.info("STEP 2: Processing submissions")
+        logger.info("=" * 60)
 
-    from process_submission import process_all
-    processed = process_all(new_submissions, dry_run=dry_run)
-    logger.info("Processed: %d", processed)
+        from process_submission import process_all
+        processed = process_all(new_submissions, dry_run=dry_run)
+        logger.info("Processed: %d", processed)
 
     # ── Step 3: Calculate statistics ──────────────────────────────────────────
     logger.info("=" * 60)

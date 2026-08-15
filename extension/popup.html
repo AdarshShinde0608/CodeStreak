@@ -21,17 +21,66 @@
           <div class="logo-sub">LeetCode → GitHub Sync</div>
         </div>
       </div>
-      <div class="status-pill" id="statusPill">
+      <div class="status-pill" id="statusPill" title="GitHub Connection Status">
         <span class="status-dot" id="statusDot"></span>
         <span id="statusText">Checking…</span>
       </div>
     </header>
 
+    <!-- LeetCode Session Banner -->
+    <div class="lc-banner" id="lcBanner">
+      <div class="lc-banner-left">
+        <span class="lc-icon">💻</span>
+        <div>
+          <div class="lc-title">LeetCode Session</div>
+          <div class="lc-status" id="lcStatusText">Checking login status…</div>
+        </div>
+      </div>
+      <a href="https://leetcode.com" target="_blank" class="lc-link-btn" id="lcLoginBtn" style="display:none">Log In</a>
+    </div>
+
+    <!-- Quick Action / Manual Sync Hub -->
+    <div class="sync-hub">
+      <div class="sync-hub-header">
+        <span class="section-title">⚡ Instant Sync</span>
+        <span class="sync-badge" id="syncCountBadge">0 Synced</span>
+      </div>
+      <p class="sync-hub-desc">
+        Sync newly accepted LeetCode solutions directly to your repository without waiting.
+      </p>
+      
+      <div class="sync-btn-group">
+        <button type="button" class="btn btn-sync" id="manualSyncBtn">
+          <span class="btn-icon">🔄</span> Scan & Sync LeetCode
+        </button>
+        <button type="button" class="btn btn-logs" id="toggleLogsBtn" title="View Recent Submissions Log">
+          📜 Logs
+        </button>
+      </div>
+
+      <!-- Live Sync Status Box -->
+      <div class="sync-progress-box" id="syncProgressBox" style="display:none">
+        <div class="sync-progress-spinner" id="syncSpinner"></div>
+        <div class="sync-progress-text" id="syncProgressText">Scanning submissions…</div>
+      </div>
+    </div>
+
+    <!-- Submissions Log View (Collapsible) -->
+    <div class="submissions-log-panel" id="submissionsLogPanel" style="display:none">
+      <div class="log-panel-header">
+        <span>Recent Submissions Log</span>
+        <button type="button" class="close-log-btn" id="closeLogsBtn">✕</button>
+      </div>
+      <div class="log-list" id="logList">
+        <div class="log-empty">Loading submissions from LeetCode…</div>
+      </div>
+    </div>
+
     <!-- Stats bar (shown when configured) -->
     <div class="stats-bar" id="statsBar" style="display:none">
       <div class="stat">
         <div class="stat-value" id="statSynced">—</div>
-        <div class="stat-label">Synced</div>
+        <div class="stat-label">Total</div>
       </div>
       <div class="stat-divider"></div>
       <div class="stat">
@@ -47,7 +96,7 @@
 
     <!-- Last synced problem card -->
     <div class="last-problem" id="lastProblem" style="display:none">
-      <div class="last-problem-label">Last synced</div>
+      <div class="last-problem-label">Last synced to GitHub</div>
       <div class="last-problem-title" id="lastProblemTitle"></div>
       <div class="last-problem-meta">
         <span class="badge" id="lastProblemDiff"></span>
@@ -55,77 +104,80 @@
       </div>
     </div>
 
-    <!-- Settings form -->
-    <form class="settings" id="settingsForm" autocomplete="off">
-      <div class="section-label">GitHub Settings</div>
+    <!-- Settings section (Collapsible) -->
+    <div class="settings-accordion">
+      <button type="button" class="accordion-toggle" id="toggleSettingsBtn">
+        <span>⚙️ GitHub Configuration</span>
+        <span class="accordion-arrow" id="accordionArrow">▼</span>
+      </button>
 
-      <div class="field">
-        <label for="githubToken">Personal Access Token</label>
-        <div class="input-wrap">
-          <input
-            type="password"
-            id="githubToken"
-            name="githubToken"
-            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-            spellcheck="false"
-          />
-          <button type="button" class="reveal-btn" id="revealBtn" title="Show/hide token">👁</button>
-        </div>
-        <div class="field-hint">
-          Needs <code>repo</code> + <code>workflow</code> scope.
-          <a href="https://github.com/settings/tokens/new" target="_blank">Create token ↗</a>
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="githubUsername">GitHub Username</label>
-        <input type="text" id="githubUsername" name="githubUsername" placeholder="your-username" />
-      </div>
-
-      <div class="field-row">
+      <form class="settings" id="settingsForm" autocomplete="off" style="display:none">
         <div class="field">
-          <label for="targetRepo">Solutions Repo</label>
-          <input type="text" id="targetRepo" name="targetRepo" placeholder="leetcode-journey" />
+          <label for="githubToken">Personal Access Token</label>
+          <div class="input-wrap">
+            <input
+              type="password"
+              id="githubToken"
+              name="githubToken"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              spellcheck="false"
+            />
+            <button type="button" class="reveal-btn" id="revealBtn" title="Show/hide token">👁</button>
+          </div>
+          <div class="field-hint">
+            Needs <code>repo</code> + <code>workflow</code> scope.
+            <a href="https://github.com/settings/tokens/new" target="_blank">Create token ↗</a>
+          </div>
         </div>
+
         <div class="field">
-          <label for="engineRepo">Engine Repo</label>
-          <input type="text" id="engineRepo" name="engineRepo" placeholder="CodeStreak" />
+          <label for="githubUsername">GitHub Username</label>
+          <input type="text" id="githubUsername" name="githubUsername" placeholder="your-username" />
         </div>
-      </div>
 
-      <div class="section-label" style="margin-top:14px">Preferences</div>
-
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-label">Auto-sync on Accept</div>
-          <div class="toggle-hint">Sync immediately when LeetCode accepts</div>
+        <div class="field-row">
+          <div class="field">
+            <label for="targetRepo">Solutions Repo</label>
+            <input type="text" id="targetRepo" name="targetRepo" placeholder="leetcode-journey" />
+          </div>
+          <div class="field">
+            <label for="engineRepo">Engine Repo</label>
+            <input type="text" id="engineRepo" name="engineRepo" placeholder="CodeStreak" />
+          </div>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="autoSync" checked />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        </label>
-      </div>
 
-      <div class="toggle-row">
-        <div>
-          <div class="toggle-label">Show Notifications</div>
-          <div class="toggle-hint">Browser notification on each sync</div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Auto-sync on Solve</div>
+            <div class="toggle-hint">Sync immediately when clicking Submit</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="autoSync" checked />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
         </div>
-        <label class="toggle">
-          <input type="checkbox" id="showNotifications" checked />
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        </label>
-      </div>
 
-      <div class="actions">
-        <button type="submit" class="btn btn-primary" id="saveBtn">
-          Save Settings
-        </button>
-        <button type="button" class="btn btn-ghost" id="testBtn">
-          Test Connection
-        </button>
-      </div>
-    </form>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Notifications</div>
+            <div class="toggle-hint">Show browser alert on sync</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="showNotifications" checked />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" id="saveBtn">
+            Save Settings
+          </button>
+          <button type="button" class="btn btn-ghost" id="testBtn">
+            Test Connection
+          </button>
+        </div>
+      </form>
+    </div>
 
     <!-- Toast notification -->
     <div class="toast" id="toast"></div>
