@@ -71,6 +71,31 @@ async function handleAccepted(submission) {
     return { status: "duplicate", message: "Already synced" };
   }
 
+  // Enrich metadata if needed
+  if (!submission.problem.id || submission.problem.difficulty === "Unknown" || !submission.problem.topics?.length) {
+    try {
+      const meta = await fetchProblemMetadata(submission.problem.slug);
+      if (meta) {
+        if (meta.id) submission.problem.id = meta.id;
+        if (meta.title) submission.problem.title = meta.title;
+        if (meta.difficulty && meta.difficulty !== "Unknown") submission.problem.difficulty = meta.difficulty;
+        if (meta.topics?.length) submission.problem.topics = meta.topics;
+      }
+    } catch (_) {}
+  }
+
+  // Enrich code if needed
+  if (!submission.code && submission.submission_id && !submission.submission_id.startsWith("dom_")) {
+    try {
+      const details = await fetchSubmissionDetail(submission.submission_id);
+      if (details) {
+        if (details.code) submission.code = details.code;
+        if (details.runtimePercentile) submission.runtime_percentile = details.runtimePercentile;
+        if (details.memoryPercentile) submission.memory_percentile = details.memoryPercentile;
+      }
+    } catch (_) {}
+  }
+
   showNotification(
     "🔄 CodeStreak syncing…",
     `Saving ${submission.problem.title} (${submission.problem.difficulty})`

@@ -81,9 +81,14 @@ jobs:
       # ── 6. Copy outputs back to leetcode-journey ─────────────────────────
       - name: Copy data + assets to leetcode-journey
         run: |
-          cp -r codestreak/data/. leetcode-journey/data/
+          mkdir -p leetcode-journey/data
+          if [ -d "codestreak/data" ] && [ "$(ls -A codestreak/data 2>/dev/null)" ]; then
+            cp -r codestreak/data/. leetcode-journey/data/
+          fi
           mkdir -p leetcode-journey/assets
-          cp -r codestreak/assets/. leetcode-journey/assets/
+          if [ -d "codestreak/assets" ] && [ "$(ls -A codestreak/assets 2>/dev/null)" ]; then
+            cp -r codestreak/assets/. leetcode-journey/assets/
+          fi
 
       # ── 7. Commit and push ───────────────────────────────────────────────
       - name: Commit and push to leetcode-journey

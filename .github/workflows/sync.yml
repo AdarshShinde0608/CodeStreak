@@ -71,15 +71,23 @@ jobs:
       - name: Copy solutions and assets to leetcode-journey
         run: |
           # Copy updated data files
-          cp -r codestreak/data/. leetcode-journey/data/
+          mkdir -p leetcode-journey/data
+          if [ -d "codestreak/data" ] && [ "$(ls -A codestreak/data 2>/dev/null)" ]; then
+            cp -r codestreak/data/. leetcode-journey/data/
+          fi
 
-          # Copy solutions (new folders only, don't overwrite manually edited READMEs)
-          rsync -av --ignore-existing codestreak/solutions/. leetcode-journey/solutions/ 2>/dev/null || \
-          cp -rn codestreak/solutions/. leetcode-journey/solutions/
+          # Copy solutions (if any new folders were created by engine)
+          mkdir -p leetcode-journey/solutions
+          if [ -d "codestreak/solutions" ] && [ "$(ls -A codestreak/solutions 2>/dev/null)" ]; then
+            rsync -av --ignore-existing codestreak/solutions/. leetcode-journey/solutions/ 2>/dev/null || \
+            cp -r codestreak/solutions/. leetcode-journey/solutions/
+          fi
 
           # Copy assets (SVG charts)
           mkdir -p leetcode-journey/assets
-          cp -r codestreak/assets/. leetcode-journey/assets/
+          if [ -d "codestreak/assets" ] && [ "$(ls -A codestreak/assets 2>/dev/null)" ]; then
+            cp -r codestreak/assets/. leetcode-journey/assets/
+          fi
 
           echo "Files synced to leetcode-journey"
 
