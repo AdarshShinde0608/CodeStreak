@@ -48,11 +48,32 @@ def slugify_folder(problem_id: int, slug: str) -> str:
     return f"{problem_id:04d}-{slug}"
 
 
-def build_solution_readme(sub: dict) -> str:
-    """Generate a README.md for a single problem solution."""
+def build_solution_readme(sub: dict, solution_dir: Path | None = None) -> str:
+    """Generate a README.md for a problem solution, including all available language solutions."""
     problem = sub["problem"]
     date_solved = sub["submitted_at"][:10]   # "2026-08-14"
     lang_display = sub["language"].title().replace("python3", "Python").replace("cpp", "C++")
+
+    # If multiple language files exist in the solution directory, list them all
+    solutions_table = ""
+    if solution_dir and solution_dir.exists():
+        solution_files = sorted(solution_dir.glob("solution.*"))
+        if len(solution_files) > 1:
+            rows = []
+            for f in solution_files:
+                ext = f.suffix.lstrip(".").lower()
+                lang_name = ext.upper()
+                if ext in ("py", "python"): lang_name = "Python"
+                elif ext in ("cpp", "cc", "cxx"): lang_name = "C++"
+                elif ext == "java": lang_name = "Java"
+                elif ext in ("js", "javascript"): lang_name = "JavaScript"
+                elif ext in ("ts", "typescript"): lang_name = "TypeScript"
+                elif ext in ("go", "golang"): lang_name = "Go"
+                elif ext in ("rs", "rust"): lang_name = "Rust"
+                elif ext in ("cs", "csharp"): lang_name = "C#"
+                rows.append(f"| {lang_name} | [{f.name}]({f.name}) |")
+            if rows:
+                solutions_table = f"\n## Available Solutions\n\n| Language | Source Code |\n|:---|:---|\n" + "\n".join(rows) + "\n"
 
     runtime_line = f"- **Runtime**: {sub['runtime']}" if sub.get("runtime") else ""
     memory_line  = f"- **Memory**: {sub['memory']}"  if sub.get("memory")  else ""
@@ -78,7 +99,7 @@ def build_solution_readme(sub: dict) -> str:
 | **Topics** | {topics_line} |
 | **Date Solved** | {date_solved} |
 | **LeetCode** | [Link]({problem['url']}) |
-
+{solutions_table}
 ## Approach
 
 > _Add your approach notes here._
@@ -114,8 +135,9 @@ def save_submissions_db(submissions: list[dict]) -> None:
 
 def process_submission(sub: dict, dry_run: bool = False) -> bool:
     """
-    Process a single new submission.
-    Creates folder structure, writes files, returns True on success.
+    Process a single submission.
+    Creates folder structure, writes/updates solution file for the specific language,
+    and regenerates the problem README with latest metadata and solution links.
     """
     problem = sub["problem"]
     folder_name = slugify_folder(problem["id"], problem["slug"])
@@ -125,30 +147,28 @@ def process_submission(sub: dict, dry_run: bool = False) -> bool:
     readme_file   = solution_dir / "README.md"
 
     if dry_run:
-        logger.info("[DRY RUN] Would create %s", solution_dir)
+        logger.info("[DRY RUN] Would create/update %s", solution_dir)
         return True
 
     solution_dir.mkdir(parents=True, exist_ok=True)
 
-    # Write solution source
-    if solution_file.exists():
-        logger.info("Solution file already exists, skipping write: %s", solution_file)
-    else:
-        with open(solution_file, "w", encoding="utf-8") as f:
-            f.write(sub.get("code", "# Solution code not available\n"))
-        logger.info("Wrote solution: %s", solution_file)
+    # Always write / replace solution file with the latest submitted code for this language
+    with open(solution_file, "w", encoding="utf-8") as f:
+        f.write(sub.get("code", "# Solution code not available\n"))
+    logger.info("Wrote/updated solution: %s", solution_file)
 
-    # Write/overwrite README (always update with latest metadata)
+    # Write / update README with latest metadata & all language implementations
     with open(readme_file, "w", encoding="utf-8") as f:
-        f.write(build_solution_readme(sub))
-    logger.info("Wrote README: %s", readme_file)
+        f.write(build_solution_readme(sub, solution_dir))
+    logger.info("Wrote/updated README: %s", readme_file)
 
     return True
 
 
 def process_all(new_submissions: list[dict], dry_run: bool = False) -> int:
     """
-    Process all new submissions, updating the submissions DB.
+    Process all submissions, updating the submissions DB.
+    Always updates or replaces existing code with the latest submission.
     Returns number of successfully processed submissions.
     """
     if not new_submissions:
@@ -156,20 +176,19 @@ def process_all(new_submissions: list[dict], dry_run: bool = False) -> int:
         return 0
 
     existing = load_submissions_db()
-    existing_ids = {s["submission_id"] for s in existing}
+    id_map = {str(s["submission_id"]): i for i, s in enumerate(existing)}
     processed = 0
 
     for sub in new_submissions:
-        sid = sub["submission_id"]
-        if sid in existing_ids:
-            logger.warning("Submission %s already in DB, skipping.", sid)
-            continue
-
+        sid = str(sub["submission_id"])
         try:
             success = process_submission(sub, dry_run=dry_run)
             if success:
-                existing.append(sub)
-                existing_ids.add(sid)
+                if sid in id_map:
+                    existing[id_map[sid]] = sub
+                else:
+                    existing.append(sub)
+                    id_map[sid] = len(existing) - 1
                 processed += 1
                 logger.info(
                     "✅  Processed: #%d %s (%s)",
@@ -183,7 +202,7 @@ def process_all(new_submissions: list[dict], dry_run: bool = False) -> int:
     if not dry_run:
         save_submissions_db(existing)
 
-    logger.info("Processed %d new submission(s)", processed)
+    logger.info("Processed %d submission(s)", processed)
     return processed
 
 

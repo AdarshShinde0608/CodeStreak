@@ -62,15 +62,6 @@ async function handleAccepted(submission) {
   const targetRepo = `${settings.githubUsername}/${settings.targetRepo}`;
   const engineRepo = `${settings.githubUsername}/${settings.engineRepo}`;
 
-  // 1. Dedup check
-  const existingSubmissions = await fetchSubmissionsDB(github, targetRepo);
-  const existingIds = new Set(existingSubmissions.map((s) => String(s.submission_id)));
-
-  if (existingIds.has(String(submission.submission_id))) {
-    console.log("[CodeStreak BG] Already synced:", submission.submission_id);
-    return { status: "duplicate", message: "Already synced" };
-  }
-
   // Enrich metadata if needed
   if (!submission.problem.id || submission.problem.difficulty === "Unknown" || !submission.problem.topics?.length) {
     try {
@@ -98,8 +89,26 @@ async function handleAccepted(submission) {
 
   showNotification(
     "🔄 CodeStreak syncing…",
-    `Saving ${submission.problem.title} (${submission.problem.difficulty})`
+    `Saving ${submission.problem.title} (${formatLangName(submission.language)})`
   );
+
+  // 1. Fetch existing submissions from target repo
+  const existingSubmissions = await fetchSubmissionsDB(github, targetRepo);
+
+  // Update or append in submissions list
+  // Match by (problem slug AND language) to ensure latest code is kept for each language
+  const subIndex = existingSubmissions.findIndex(
+    (s) => (s.problem?.slug === submission.problem.slug || String(s.problem?.id) === String(submission.problem.id)) &&
+           (s.language?.toLowerCase() === submission.language?.toLowerCase())
+  );
+
+  if (subIndex >= 0) {
+    existingSubmissions[subIndex] = submission;
+    console.log(`[CodeStreak BG] Updated existing solution: ${submission.problem.title} (${submission.language})`);
+  } else {
+    existingSubmissions.push(submission);
+    console.log(`[CodeStreak BG] Added new solution: ${submission.problem.title} (${submission.language})`);
+  }
 
   // 2. Commit solution file & solution README
   const folderName = slugifyFolder(submission.problem.id, submission.problem.slug);
@@ -107,30 +116,29 @@ async function handleAccepted(submission) {
   const codePath   = `solutions/${folderName}/solution.${ext}`;
   const readmePath = `solutions/${folderName}/README.md`;
 
+  // Always write/update the solution file with the latest code for this language
   await github.upsertFile(
     targetRepo,
     codePath,
     submission.code || "# Code not available\n",
-    `✅ Add solution: ${submission.problem.title}`
+    `✅ Update solution: ${submission.problem.title} (${formatLangName(submission.language)})`
   );
 
+  // Update README listing all available language solutions for this problem
   await github.upsertFile(
     targetRepo,
     readmePath,
-    buildProblemReadme(submission),
-    `📝 Add README: ${submission.problem.title}`
+    buildProblemReadme(submission, existingSubmissions),
+    `📝 Update README: ${submission.problem.title}`
   );
 
-  // 3. Append to submissions array
-  existingSubmissions.push(submission);
-
-  // 4. Regenerate and push full dashboard (README.md, data files, SVGs)
+  // 3. Regenerate and push full dashboard (README.md, data files, SVGs)
   await pushCompleteDashboard(github, settings, existingSubmissions);
 
-  // 5. Update local storage statistics
+  // 4. Update local storage statistics
   await updateLocalStats(submission, existingSubmissions.length);
 
-  // 6. Trigger process workflow on engine repo (background verification)
+  // 5. Trigger process workflow on engine repo (background verification)
   try {
     await github.triggerWorkflow(engineRepo, "process.yml");
   } catch (err) {
@@ -147,7 +155,7 @@ async function handleAccepted(submission) {
 
 // ── Manual Scan & Sync Submissions ────────────────────────────────────────────
 
-async function syncRecentSubmissions(limit = 20) {
+async function syncRecentSubmissions(limit = 50) {
   const settings = await loadSettings();
 
   if (!settings.githubToken || !settings.githubUsername) {
@@ -165,32 +173,25 @@ async function syncRecentSubmissions(limit = 20) {
   // 2. Fetch LeetCode recent submissions via browser session
   const rawList = await fetchRecentSubmissionsRaw(limit);
   const acceptedList = rawList.filter((s) => s.status_display === "Accepted");
-  const newSubmissionsToSync = acceptedList.filter((s) => !existingIds.has(String(s.id)));
-
-  if (newSubmissionsToSync.length === 0) {
-    // If no new submissions, make sure the main README is up-to-date with existing submissions
-    if (existingSubmissions.length > 0) {
-      await pushCompleteDashboard(github, settings, existingSubmissions);
-    }
-    return {
-      syncedCount: 0,
-      alreadySyncedCount: acceptedList.length,
-      message: "Everything is up to date! Refreshed dashboard.",
-    };
-  }
-
-  showNotification(
-    "🔄 CodeStreak Syncing…",
-    `Found ${newSubmissionsToSync.length} new accepted submission(s). Syncing…`
-  );
 
   let syncedCount = 0;
 
-  for (const raw of newSubmissionsToSync) {
+  for (const raw of acceptedList) {
     const sid = String(raw.id);
     const slug = raw.title_slug;
+    const lang = raw.lang || "unknown";
 
-    // Fetch question metadata
+    // Find if already present for this problem and language
+    const existingIndex = existingSubmissions.findIndex(
+      (s) => (s.problem?.slug === slug) && (s.language?.toLowerCase() === lang.toLowerCase())
+    );
+
+    // If already exists with the exact same submission_id, skip re-uploading file
+    if (existingIndex >= 0 && String(existingSubmissions[existingIndex].submission_id) === sid) {
+      continue;
+    }
+
+    // Fetch question metadata if needed
     let problemMeta = await fetchProblemMetadata(slug);
     if (!problemMeta) {
       problemMeta = {
@@ -208,13 +209,11 @@ async function syncRecentSubmissions(limit = 20) {
     let runtimePercentile = null;
     let memoryPercentile = null;
 
-    if (!code) {
-      const details = await fetchSubmissionDetail(sid);
-      if (details) {
-        code = details.code || "";
-        runtimePercentile = details.runtimePercentile || null;
-        memoryPercentile = details.memoryPercentile || null;
-      }
+    const details = await fetchSubmissionDetail(sid);
+    if (details) {
+      if (details.code) code = details.code;
+      runtimePercentile = details.runtimePercentile || null;
+      memoryPercentile = details.memoryPercentile || null;
     }
 
     const isoDate = raw.timestamp
@@ -224,7 +223,7 @@ async function syncRecentSubmissions(limit = 20) {
     const normalized = {
       submission_id: sid,
       problem: problemMeta,
-      language: raw.lang || "unknown",
+      language: lang,
       status: "Accepted",
       submitted_at: isoDate,
       runtime: raw.runtime || null,
@@ -236,27 +235,34 @@ async function syncRecentSubmissions(limit = 20) {
 
     // Commit solution files to leetcode-journey
     const folderName = slugifyFolder(problemMeta.id, problemMeta.slug);
-    const ext = getExtension(raw.lang);
+    const ext = getExtension(lang);
     const codePath = `solutions/${folderName}/solution.${ext}`;
     const readmePath = `solutions/${folderName}/README.md`;
 
     try {
+      // Write / update solution file
       await github.upsertFile(
         targetRepo,
         codePath,
         code || "# Code not available\n",
-        `✅ Add solution: ${problemMeta.title}`
+        `✅ Update solution: ${problemMeta.title} (${formatLangName(lang)})`
       );
 
+      if (existingIndex >= 0) {
+        existingSubmissions[existingIndex] = normalized;
+      } else {
+        existingSubmissions.push(normalized);
+      }
+      existingIds.add(sid);
+
+      // Write / update problem README
       await github.upsertFile(
         targetRepo,
         readmePath,
-        buildProblemReadme(normalized),
-        `📝 Add README: ${problemMeta.title}`
+        buildProblemReadme(normalized, existingSubmissions),
+        `📝 Update README: ${problemMeta.title}`
       );
 
-      existingSubmissions.push(normalized);
-      existingIds.add(sid);
       syncedCount++;
     } catch (err) {
       console.error(`[CodeStreak BG] Failed to sync ${problemMeta.title}:`, err);
@@ -264,10 +270,12 @@ async function syncRecentSubmissions(limit = 20) {
   }
 
   // 3. Regenerate and commit full dashboard (README.md, data files, and SVGs)
-  await pushCompleteDashboard(github, settings, existingSubmissions);
+  if (existingSubmissions.length > 0) {
+    await pushCompleteDashboard(github, settings, existingSubmissions);
+  }
 
   // 4. Update local storage stats
-  const lastSub = newSubmissionsToSync[0] || existingSubmissions[0];
+  const lastSub = existingSubmissions[existingSubmissions.length - 1];
   if (lastSub) {
     await updateLocalStats(lastSub, existingSubmissions.length);
   }
@@ -280,14 +288,14 @@ async function syncRecentSubmissions(limit = 20) {
   }
 
   showNotification(
-    `🎉 ${syncedCount} Problem(s) Synced!`,
-    `Main README.md and stats updated in ${targetRepo}`
+    `🎉 Sync Complete!`,
+    syncedCount > 0 ? `Synced/updated ${syncedCount} solution(s) in ${targetRepo}` : `Dashboard is fully up-to-date!`
   );
 
   return {
     syncedCount,
     totalAccepted: acceptedList.length,
-    message: `Successfully synced ${syncedCount} problem(s) and updated the main README!`,
+    message: `Successfully synced ${syncedCount} problem solution(s) and updated your dashboard!`,
   };
 }
 
@@ -337,7 +345,7 @@ async function pushCompleteDashboard(github, settings, submissions) {
 // ── Pure JS Statistics Engine ─────────────────────────────────────────────────
 
 function calculateStats(submissions) {
-  // Deduplicate by problem slug
+  // Deduplicate by problem slug for total solved and difficulty counts
   const seenSlugs = new Map();
   const sorted = [...submissions].sort((a, b) => (a.submitted_at > b.submitted_at ? 1 : -1));
 
@@ -361,9 +369,6 @@ function calculateStats(submissions) {
     const diff = (sub.problem?.difficulty || "Easy").toLowerCase();
     if (byDifficulty[diff] !== undefined) byDifficulty[diff]++;
 
-    const lang = (sub.language || "unknown").toLowerCase();
-    byLanguage[lang] = (byLanguage[lang] || 0) + 1;
-
     for (const t of sub.problem?.topics || []) {
       byTopic[t] = (byTopic[t] || 0) + 1;
     }
@@ -377,6 +382,18 @@ function calculateStats(submissions) {
 
     const yKey = localDate.slice(0, 4);
     perYear[yKey] = (perYear[yKey] || 0) + 1;
+  }
+
+  // Count each distinct (slug, language) solve for language distribution
+  const seenLangSolves = new Set();
+  for (const sub of submissions) {
+    const slug = sub.problem?.slug || String(sub.submission_id);
+    const lang = (sub.language || "unknown").toLowerCase();
+    const key = `${slug}:${lang}`;
+    if (!seenLangSolves.has(key)) {
+      seenLangSolves.add(key);
+      byLanguage[lang] = (byLanguage[lang] || 0) + 1;
+    }
   }
 
   // Sort language and topics by frequency
@@ -994,13 +1011,31 @@ function formatLangName(lang = "") {
   return map[lang.toLowerCase()] || lang;
 }
 
-function buildProblemReadme(sub) {
+function buildProblemReadme(sub, allSubmissions = []) {
   const p = sub.problem;
   const date = sub.submitted_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
   const topics = p.topics?.join(", ") || "—";
   const runtime = sub.runtime ? `- **Runtime**: ${sub.runtime}` : "";
   const memory = sub.memory ? `- **Memory**: ${sub.memory}` : "";
   const perf = (runtime || memory) ? `\n## Performance\n\n${[runtime, memory].filter(Boolean).join("\n")}\n` : "";
+
+  // Check if there are multiple language submissions for this problem
+  const problemSubs = allSubmissions.filter(
+    (s) => s.problem?.slug === p.slug || String(s.problem?.id) === String(p.id)
+  );
+
+  let solutionsTable = "";
+  if (problemSubs.length > 1) {
+    const rows = problemSubs.map((s) => {
+      const ext = getExtension(s.language);
+      const lName = formatLangName(s.language);
+      const sDate = s.submitted_at?.slice(0, 10) || "—";
+      const sRun = s.runtime || "—";
+      const sMem = s.memory || "—";
+      return `| ${lName} | [solution.${ext}](solution.${ext}) | ${sDate} | ${sRun} | ${sMem} |`;
+    });
+    solutionsTable = `\n## Available Solutions\n\n| Language | Source Code | Date Solved | Runtime | Memory |\n|:---|:---|:---|:---|:---|\n${rows.join("\n")}\n`;
+  }
 
   return `# ${p.title}
 
@@ -1012,7 +1047,7 @@ function buildProblemReadme(sub) {
 | **Topics** | ${topics} |
 | **Date Solved** | ${date} |
 | **LeetCode** | [Link](${p.url}) |
-
+${solutionsTable}
 ## Approach
 
 > _Add your approach notes here._

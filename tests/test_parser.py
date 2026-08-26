@@ -169,3 +169,13 @@ class TestBuildSolutionReadme:
         sub = {**SAMPLE_SUB, "problem": {**SAMPLE_SUB["problem"], "topics": []}}
         readme = build_solution_readme(sub)
         assert "—" in readme   # placeholder for no topics
+
+    def test_multi_language_readme(self, tmp_path):
+        sol_dir = tmp_path / "0001-two-sum"
+        sol_dir.mkdir()
+        (sol_dir / "solution.py").write_text("print('python')")
+        (sol_dir / "solution.cpp").write_text("cout << 'cpp';")
+        readme = build_solution_readme(SAMPLE_SUB, solution_dir=sol_dir)
+        assert "Available Solutions" in readme
+        assert "[solution.py](solution.py)" in readme
+        assert "[solution.cpp](solution.cpp)" in readme

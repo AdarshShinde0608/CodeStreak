@@ -179,7 +179,7 @@ manualSyncBtn.addEventListener("click", async () => {
   syncProgressBox.style.display    = "flex";
   syncProgressText.textContent     = "Connecting to LeetCode API…";
 
-  chrome.runtime.sendMessage({ type: "SYNC_RECENT_SUBMISSIONS", limit: 20 }, async (res) => {
+  chrome.runtime.sendMessage({ type: "SYNC_RECENT_SUBMISSIONS", limit: 50 }, async (res) => {
     manualSyncBtn.disabled  = false;
     manualSyncBtn.innerHTML = `<span class="btn-icon">🔄</span> Scan & Sync LeetCode`;
     syncProgressBox.style.display = "none";
@@ -222,7 +222,7 @@ closeLogsBtn.addEventListener("click", () => {
 async function loadSubmissionLogs() {
   logList.innerHTML = `<div class="log-empty">Fetching submissions from LeetCode…</div>`;
 
-  chrome.runtime.sendMessage({ type: "GET_SUBMISSION_LOGS", limit: 20 }, (res) => {
+  chrome.runtime.sendMessage({ type: "GET_SUBMISSION_LOGS", limit: 50 }, (res) => {
     if (chrome.runtime.lastError || !res?.ok) {
       const msg = res?.error || "Could not load submission logs. Ensure you are logged into LeetCode.";
       logList.innerHTML = `<div class="log-empty" style="color:var(--red)">${msg}</div>`;

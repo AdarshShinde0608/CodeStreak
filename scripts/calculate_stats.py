@@ -122,9 +122,6 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
         diff = sub["problem"].get("difficulty", "Unknown").lower()
         by_difficulty[diff] += 1
 
-        lang = sub.get("language", "unknown").lower()
-        by_language[lang] += 1
-
         for topic in sub["problem"].get("topics", []):
             by_topic[topic] += 1
 
@@ -134,6 +131,16 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
         per_week[week_key(local_date)]  += 1
         per_month[month_key(local_date)] += 1
         per_year[year_key(local_date)]   += 1
+
+    # For language distribution, count each unique (slug, language) solve
+    seen_lang_solves: set[tuple[str, str]] = set()
+    for sub in submissions:
+        slug = sub["problem"]["slug"]
+        lang = sub.get("language", "unknown").lower()
+        key = (slug, lang)
+        if key not in seen_lang_solves:
+            seen_lang_solves.add(key)
+            by_language[lang] += 1
 
     first_solved  = min(dates) if dates else None
     latest_solved = max(dates) if dates else None

@@ -174,3 +174,14 @@ class TestCalculateStatistics:
         stats = calculate_statistics(subs)
         langs = list(stats["byLanguage"].keys())
         assert langs[0] == "python3"  # most used first
+
+    def test_multi_language_same_problem(self):
+        """Solving the same problem in Python and C++ should credit both languages while keeping totalSolved = 1."""
+        subs = [
+            make_sub("two-sum", language="python3", utc_str="2026-08-10T10:00:00Z"),
+            make_sub("two-sum", language="cpp", utc_str="2026-08-11T10:00:00Z"),
+        ]
+        stats = calculate_statistics(subs)
+        assert stats["totalSolved"] == 1
+        assert stats["byLanguage"]["python3"] == 1
+        assert stats["byLanguage"]["cpp"] == 1
