@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CodeStreak",
-  "version": "1.0.0",
-  "description": "Automatically syncs accepted LeetCode solutions to GitHub and updates your CodeStreak dashboard.",
+  "version": "1.1.0",
+  "description": "Automatically syncs accepted solutions from LeetCode, Codeforces, GeeksforGeeks, and CodeChef to GitHub and updates your CodeStreak dashboard.",
 
   "permissions": [
     "storage",
@@ -12,6 +12,10 @@
 
   "host_permissions": [
     "https://leetcode.com/*",
+    "https://codeforces.com/*",
+    "https://geeksforgeeks.org/*",
+    "https://*.geeksforgeeks.org/*",
+    "https://www.codechef.com/*",
     "https://api.github.com/*"
   ],
 
@@ -31,8 +35,33 @@
       "matches": ["https://leetcode.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://codeforces.com/contest/*/submission/*",
+        "https://codeforces.com/contest/*/my",
+        "https://codeforces.com/problemset/status*",
+        "https://codeforces.com/submissions/*"
+      ],
+      "js": ["codeforces_content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://*.geeksforgeeks.org/problems/*"],
+      "js": ["gfg_content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.codechef.com/problems/*",
+        "https://www.codechef.com/*/problems/*",
+        "https://www.codechef.com/submit/*"
+      ],
+      "js": ["codechef_content.js"],
+      "run_at": "document_idle"
     }
   ],
+
   "web_accessible_resources": [
     {
       "resources": ["injected.js"],

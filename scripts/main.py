@@ -58,27 +58,57 @@ def run_pipeline(dry_run: bool = False) -> None:
     tz_name     = config.get("timezone", "Asia/Kolkata")
     daily_goal  = config.get("daily_goal", 1)
     weekly_goal = config.get("weekly_goal", 7)
+    platforms   = config.get("platforms", {})
 
     # ── Step 1: Fetch new submissions ─────────────────────────────────────────
     logger.info("=" * 60)
-    logger.info("STEP 1: Fetching new submissions from LeetCode")
+    logger.info("STEP 1: Fetching new submissions from enabled platforms")
     logger.info("=" * 60)
 
     import os
-    leetcode_session = os.environ.get("LEETCODE_SESSION", "").strip()
     new_submissions = []
     processed = 0
 
-    if not leetcode_session:
-        logger.info("ℹ️  LEETCODE_SESSION not set. Skipping direct LeetCode fetch.")
-        logger.info("    (Submissions are synced directly via the CodeStreak Browser Extension)")
+    # ── Step 1a: LeetCode ──────────────────────────────────────────────────
+    lc_config = platforms.get("leetcode", {})
+    lc_enabled = lc_config.get("enabled", True)   # default enabled
+    leetcode_session = os.environ.get("LEETCODE_SESSION", "").strip()
+
+    if not lc_enabled:
+        logger.info("LeetCode: disabled in config.")
+    elif not leetcode_session:
+        logger.info("LeetCode: LEETCODE_SESSION not set. Skipping direct fetch.")
+        logger.info("    (Submissions are synced via the CodeStreak Browser Extension)")
     else:
         try:
             from fetch_submissions import fetch_new_submissions
-            new_submissions = fetch_new_submissions(fetch_limit=fetch_limit)
-            logger.info("New submissions found: %d", len(new_submissions))
+            lc_subs = fetch_new_submissions(fetch_limit=fetch_limit)
+            new_submissions.extend(lc_subs)
+            logger.info("LeetCode: %d new submission(s) fetched", len(lc_subs))
         except Exception as exc:
-            logger.warning("Could not fetch remote submissions: %s", exc)
+            logger.warning("LeetCode: Could not fetch submissions: %s", exc)
+
+    # ── Step 1b: Codeforces ────────────────────────────────────────────────
+    cf_config  = platforms.get("codeforces", {})
+    cf_enabled = cf_config.get("enabled", False)
+    cf_handle  = cf_config.get("handle", "") or os.environ.get("CF_HANDLE", "").strip()
+
+    if not cf_enabled:
+        logger.info("Codeforces: disabled in config. (Set platforms.codeforces.enabled: true to enable)")
+    elif not cf_handle:
+        logger.info("Codeforces: no handle configured. Set CF_HANDLE or platforms.codeforces.handle in config.yml")
+    else:
+        try:
+            from codeforces_adapter import CodeforcesAdapter
+            cf_adapter = CodeforcesAdapter(handle=cf_handle)
+            cf_subs = cf_adapter.get_normalized_accepted_submissions(count=fetch_limit * 5)
+            cf_canonical = [s.to_canonical_dict() for s in cf_subs]
+            new_submissions.extend(cf_canonical)
+            logger.info("Codeforces: %d accepted submission(s) fetched for @%s", len(cf_canonical), cf_handle)
+        except Exception as exc:
+            logger.warning("Codeforces: Could not fetch submissions: %s", exc)
+
+    logger.info("Total new submissions across all platforms: %d", len(new_submissions))
 
     # ── Step 2: Process submissions ───────────────────────────────────────────
     if new_submissions:
@@ -89,6 +119,7 @@ def run_pipeline(dry_run: bool = False) -> None:
         from process_submission import process_all
         processed = process_all(new_submissions, dry_run=dry_run)
         logger.info("Processed: %d", processed)
+
 
     # ── Step 3: Calculate statistics ──────────────────────────────────────────
     logger.info("=" * 60)
