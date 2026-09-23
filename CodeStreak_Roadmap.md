@@ -166,7 +166,8 @@ Example:
 
 ```text
 solutions/
-└── 0001-two-sum/
+└── leetcode/
+        └── 0001-two-sum/
     ├── solution.py
     └── README.md
 ```
@@ -585,13 +586,16 @@ leetcode-journey/
 ├── README.md
 │
 ├── solutions/
-│   ├── 0001-two-sum/
-│   │   ├── solution.py
-│   │   └── README.md
+│   ├── leetcode/
+│   │   ├── 0001-two-sum/
+│   │   │   ├── solution.py
+│   │   │   └── README.md
 │   │
-│   ├── 0002-add-two-numbers/
-│   │   ├── solution.cpp
-│   │   └── README.md
+│   ├── geeksforgeeks/
+│   │   └── <problem-slug>/
+│   │
+│   ├── codeforces/
+│   │   └── <contest-id>-<index>-<slug>/
 │   │
 │   └── ...
 │

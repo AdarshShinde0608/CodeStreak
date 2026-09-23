@@ -70,6 +70,12 @@ class TestSlugifyFolder:
     def test_three_digit(self):
         assert slugify_folder(100, "same-tree") == "0100-same-tree"
 
+    def test_geeksforgeeks_slug_id_is_not_duplicated(self):
+        assert slugify_folder("two-sum", "two-sum", "geeksforgeeks") == "two-sum"
+
+    def test_codeforces_string_id_is_preserved(self):
+        assert slugify_folder("1234A", "two-sum", "codeforces") == "1234A-two-sum"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # get_extension

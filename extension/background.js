@@ -98,7 +98,8 @@ async function handleAccepted(submission) {
   // Update or append in submissions list
   // Match by (problem slug AND language) to ensure latest code is kept for each language
   const subIndex = existingSubmissions.findIndex(
-    (s) => (s.problem?.slug === submission.problem.slug || String(s.problem?.id) === String(submission.problem.id)) &&
+      (s) => normalizePlatform(s.platform) === normalizePlatform(submission.platform) &&
+        (s.problem?.slug === submission.problem.slug || String(s.problem?.id) === String(submission.problem.id)) &&
            (s.language?.toLowerCase() === submission.language?.toLowerCase())
   );
 
@@ -111,8 +112,8 @@ async function handleAccepted(submission) {
   }
 
   // 2. Commit solution file & solution README
-  const platform    = submission.platform || "leetcode";
-  const folderName = slugifyFolder(submission.problem.id, submission.problem.slug);
+  const platform    = normalizePlatform(submission.platform);
+  const folderName = slugifyFolder(submission.problem.id, submission.problem.slug, platform);
   const ext        = getExtension(submission.language);
   const codePath   = `solutions/${platform}/${folderName}/solution.${ext}`;
   const readmePath = `solutions/${platform}/${folderName}/README.md`;
@@ -236,8 +237,8 @@ async function syncRecentSubmissions(limit = 50) {
     };
 
     // Commit solution files to leetcode-journey (platform-scoped)
-    const platform = normalized.platform || "leetcode";
-    const folderName = slugifyFolder(problemMeta.id, problemMeta.slug);
+    const platform = normalizePlatform(normalized.platform);
+    const folderName = slugifyFolder(problemMeta.id, problemMeta.slug, platform);
     const ext = getExtension(lang);
     const codePath = `solutions/${platform}/${folderName}/solution.${ext}`;
     const readmePath = `solutions/${platform}/${folderName}/README.md`;
@@ -349,26 +350,31 @@ async function pushCompleteDashboard(github, settings, submissions) {
 
 function calculateStats(submissions) {
   // Deduplicate by problem slug for total solved and difficulty counts
-  const seenSlugs = new Map();
+  const seenProblems = new Map();
   const sorted = [...submissions].sort((a, b) => (a.submitted_at > b.submitted_at ? 1 : -1));
 
   for (const sub of sorted) {
+    const platform = normalizePlatform(sub.platform);
     const slug = sub.problem?.slug || String(sub.submission_id);
-    if (!seenSlugs.has(slug)) {
-      seenSlugs.set(slug, sub);
+    const key = `${platform}:${slug}`;
+    if (!seenProblems.has(key)) {
+      seenProblems.set(key, sub);
     }
   }
 
-  const uniqueSubs = Array.from(seenSlugs.values());
+  const uniqueSubs = Array.from(seenProblems.values());
   const byDifficulty = { easy: 0, medium: 0, hard: 0 };
   const byLanguage   = {};
   const byTopic      = {};
+  const byPlatform   = {};
   const perDay       = {};
   const perMonth     = {};
   const perYear      = {};
   const dates        = [];
 
   for (const sub of uniqueSubs) {
+    const platform = normalizePlatform(sub.platform);
+    byPlatform[platform] = (byPlatform[platform] || 0) + 1;
     const diff = (sub.problem?.difficulty || "Easy").toLowerCase();
     if (byDifficulty[diff] !== undefined) byDifficulty[diff]++;
 
@@ -390,9 +396,10 @@ function calculateStats(submissions) {
   // Count each distinct (slug, language) solve for language distribution
   const seenLangSolves = new Set();
   for (const sub of submissions) {
+    const platform = normalizePlatform(sub.platform);
     const slug = sub.problem?.slug || String(sub.submission_id);
     const lang = (sub.language || "unknown").toLowerCase();
-    const key = `${slug}:${lang}`;
+    const key = `${platform}:${slug}:${lang}`;
     if (!seenLangSolves.has(key)) {
       seenLangSolves.add(key);
       byLanguage[lang] = (byLanguage[lang] || 0) + 1;
@@ -409,6 +416,7 @@ function calculateStats(submissions) {
     medium: byDifficulty.medium,
     hard: byDifficulty.hard,
     byLanguage: sortedLang,
+    byPlatform,
     byTopic: sortedTopic,
     perDay,
     perMonth,
@@ -559,13 +567,17 @@ function generateMainReadme(stats, streak, achievements, submissions, username, 
   const topicEntries = Object.entries(stats.byTopic || {}).slice(0, 10);
   const topicRows = topicEntries.map(([t, count]) => `| ${t} | ${count} |`).join("\n");
 
+  const platformRows = Object.entries(stats.byPlatform || {})
+    .map(([platform, count]) => `| ${platform} | ${count} |`)
+    .join("\n");
+
   // Recent Problems
   const recentSubs = [...submissions].sort((a, b) => (a.submitted_at < b.submitted_at ? 1 : -1)).slice(0, 10);
   const recentRows = recentSubs
     .map((s) => {
       const p = s.problem;
       const badge = p.difficulty === "Easy" ? "🟢 Easy" : p.difficulty === "Medium" ? "🟡 Medium" : "🔴 Hard";
-      return `| ${p.id || "—"} | [${p.title}](${p.url || "#"}) | ${badge} | ${formatLangName(s.language)} | ${s.submitted_at?.slice(0, 10) || "—"} |`;
+      return `| ${p.id || "—"} | ${normalizePlatform(s.platform)} | [${p.title}](${p.url || "#"}) | ${badge} | ${formatLangName(s.language)} | ${s.submitted_at?.slice(0, 10) || "—"} |`;
     })
     .join("\n");
 
@@ -617,6 +629,14 @@ ${langRows || "| None | 0 | 0% |"}
 
 ---
 
+## 🧩 Platforms
+
+| Platform | Problems |
+|:--------:|:--------:|
+${platformRows || "| None | 0 |"}
+
+---
+
 ${topicRows ? `## 🗂️ Top Topics\n\n| Topic | Problems |\n|:-----:|:--------:|\n${topicRows}\n\n---\n` : ""}
 
 ## 🔥 Streak Details
@@ -635,9 +655,9 @@ ${topicRows ? `## 🗂️ Top Topics\n\n| Topic | Problems |\n|:-----:|:--------
 
 ## 🕐 Recent Submissions
 
-| # | Problem | Difficulty | Language | Date |
-|:-:|:-------:|:----------:|:--------:|:----:|
-${recentRows || "| — | No submissions yet | — | — | — |"}
+| # | Platform | Problem | Difficulty | Language | Date |
+|:-:|:--------:|:-------:|:----------:|:--------:|:----:|
+${recentRows || "| — | — | No submissions yet | — | — | — |"}
 
 ---
 
@@ -990,8 +1010,19 @@ async function fetchSubmissionsDB(github, repo) {
   }
 }
 
-function slugifyFolder(id, slug) {
-  return `${String(id).padStart(4, "0")}-${slug}`;
+function normalizePlatform(platform) {
+  const value = String(platform || "leetcode").toLowerCase().trim();
+  return value.replace(/[^a-z0-9-]/g, "") || "leetcode";
+}
+
+function slugifyFolder(id, slug, platform = "leetcode") {
+  const safeId = String(id ?? "").trim();
+  const safeSlug = String(slug || "problem").trim().toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
+  if (normalizePlatform(platform) === "geeksforgeeks" && safeId.toLowerCase() === safeSlug) {
+    return safeSlug;
+  }
+  if (/^\d+$/.test(safeId)) return `${safeId.padStart(4, "0")}-${safeSlug}`;
+  return `${safeId || "problem"}-${safeSlug}`;
 }
 
 const LANG_EXT = {
@@ -1016,6 +1047,7 @@ function formatLangName(lang = "") {
 
 function buildProblemReadme(sub, allSubmissions = []) {
   const p = sub.problem;
+  const platform = normalizePlatform(sub.platform);
   const date = sub.submitted_at?.slice(0, 10) || new Date().toISOString().slice(0, 10);
   const topics = p.topics?.join(", ") || "—";
   const runtime = sub.runtime ? `- **Runtime**: ${sub.runtime}` : "";
@@ -1024,7 +1056,8 @@ function buildProblemReadme(sub, allSubmissions = []) {
 
   // Check if there are multiple language submissions for this problem
   const problemSubs = allSubmissions.filter(
-    (s) => s.problem?.slug === p.slug || String(s.problem?.id) === String(p.id)
+    (s) => normalizePlatform(s.platform) === platform &&
+      (s.problem?.slug === p.slug || String(s.problem?.id) === String(p.id))
   );
 
   let solutionsTable = "";
@@ -1040,6 +1073,14 @@ function buildProblemReadme(sub, allSubmissions = []) {
     solutionsTable = `\n## Available Solutions\n\n| Language | Source Code | Date Solved | Runtime | Memory |\n|:---|:---|:---|:---|:---|\n${rows.join("\n")}\n`;
   }
 
+  const platformLabels = {
+    leetcode: "LeetCode",
+    geeksforgeeks: "GeeksforGeeks",
+    codeforces: "Codeforces",
+    codechef: "CodeChef",
+  };
+  const platformLabel = platformLabels[platform] || platform;
+
   return `# ${p.title}
 
 | Field | Value |
@@ -1049,7 +1090,8 @@ function buildProblemReadme(sub, allSubmissions = []) {
 | **Language** | ${formatLangName(sub.language)} |
 | **Topics** | ${topics} |
 | **Date Solved** | ${date} |
-| **LeetCode** | [Link](${p.url}) |
+| **Platform** | ${platformLabel} |
+| **${platformLabel}** | [Link](${p.url}) |
 ${solutionsTable}
 ## Approach
 

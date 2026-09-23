@@ -12,7 +12,7 @@ Requirements (CORE-01, CORE-03):
     - `data/submissions.json` entries receive `platform: "leetcode"` if missing
 
 Usage:
-    python scripts/migrate_solutions.py [--dry-run]
+    python scripts/migrate_solutions.py [--dry-run] [--target-root PATH]
 
 Safe to run multiple times; already-migrated paths are skipped gracefully.
 """
@@ -45,39 +45,42 @@ def is_problem_folder(path: Path) -> bool:
     return path.is_dir() and len(path.name) >= 5 and path.name[:4].isdigit() and path.name[4] == "-"
 
 
-def load_submissions() -> list[dict]:
-    if not SUBMISSIONS_DB.exists():
-        logger.warning("No submissions.json found at %s", SUBMISSIONS_DB)
+def load_submissions(submissions_db: Path | None = None) -> list[dict]:
+    database = submissions_db or SUBMISSIONS_DB
+    if not database.exists():
+        logger.warning("No submissions.json found at %s", database)
         return []
-    with open(SUBMISSIONS_DB, "r", encoding="utf-8") as f:
+    with open(database, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def save_submissions(data: list[dict]) -> None:
-    with open(SUBMISSIONS_DB, "w", encoding="utf-8") as f:
+def save_submissions(data: list[dict], submissions_db: Path | None = None) -> None:
+    database = submissions_db or SUBMISSIONS_DB
+    with open(database, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    logger.info("Saved %d submissions to %s", len(data), SUBMISSIONS_DB)
+    logger.info("Saved %d submissions to %s", len(data), database)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Migration logic
 # ──────────────────────────────────────────────────────────────────────────────
 
-def migrate_solution_dirs(dry_run: bool = False) -> int:
+def migrate_solution_dirs(solutions_dir: Path | None = None, dry_run: bool = False) -> int:
     """
     Move all top-level problem folders in solutions/ to solutions/leetcode/.
     Returns count of folders moved.
     """
-    if not SOLUTIONS_DIR.exists():
+    source_dir = solutions_dir or SOLUTIONS_DIR
+    if not source_dir.exists():
         logger.info("solutions/ directory does not exist — nothing to migrate.")
         return 0
 
-    lc_dir = SOLUTIONS_DIR / "leetcode"
+    lc_dir = source_dir / "leetcode"
     if not dry_run:
         lc_dir.mkdir(parents=True, exist_ok=True)
 
     moved = 0
-    for child in sorted(SOLUTIONS_DIR.iterdir()):
+    for child in sorted(source_dir.iterdir()):
         if not is_problem_folder(child):
             continue  # skip platform subdirectories (leetcode/, codeforces/, etc.) and files
 
@@ -98,13 +101,13 @@ def migrate_solution_dirs(dry_run: bool = False) -> int:
     return moved
 
 
-def backfill_platform_field(dry_run: bool = False) -> int:
+def backfill_platform_field(submissions_db: Path | None = None, dry_run: bool = False) -> int:
     """
     Ensure every record in data/submissions.json has a 'platform' field.
     Defaults to 'leetcode' for all records that don't have one.
     Returns count of records updated.
     """
-    submissions = load_submissions()
+    submissions = load_submissions(submissions_db)
     updated = 0
 
     for sub in submissions:
@@ -116,7 +119,7 @@ def backfill_platform_field(dry_run: bool = False) -> int:
         if dry_run:
             logger.info("[DRY RUN] Would backfill 'platform' on %d records", updated)
         else:
-            save_submissions(submissions)
+            save_submissions(submissions, submissions_db)
             logger.info("Backfilled 'platform' field on %d records", updated)
     else:
         logger.info("All submissions already have 'platform' field — no backfill needed.")
@@ -142,6 +145,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Preview changes without writing anything.",
     )
+    parser.add_argument(
+        "--target-root",
+        type=Path,
+        default=ROOT_DIR,
+        help="Repository root containing solutions/ and data/submissions.json.",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 60)
@@ -153,12 +162,16 @@ if __name__ == "__main__":
 
     # 1. Move solution folders
     logger.info("\nStep 1: Migrating solution directories...")
-    moved = migrate_solution_dirs(dry_run=args.dry_run)
+    target_root = args.target_root.resolve()
+    target_solutions = target_root / "solutions"
+    target_submissions = target_root / "data" / "submissions.json"
+
+    moved = migrate_solution_dirs(target_solutions, dry_run=args.dry_run)
     logger.info("Directories moved: %d", moved)
 
     # 2. Backfill platform field in submissions DB
     logger.info("\nStep 2: Backfilling platform field in submissions.json...")
-    updated = backfill_platform_field(dry_run=args.dry_run)
+    updated = backfill_platform_field(target_submissions, dry_run=args.dry_run)
     logger.info("Records updated: %d", updated)
 
     logger.info("\nMigration complete!")

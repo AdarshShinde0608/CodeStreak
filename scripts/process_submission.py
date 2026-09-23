@@ -42,18 +42,20 @@ SUBMISSIONS_DB = ROOT_DIR / "data" / "submissions.json"
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
-def slugify_folder(problem_id: int | str, slug: str) -> str:
+def slugify_folder(problem_id: int | str, slug: str, platform: str = "leetcode") -> str:
     """
     Convert a problem id + slug into a stable folder name.
 
     Numeric IDs retain the original LeetCode zero-padding convention, while
     platform-specific IDs such as Codeforces' ``1234A`` are preserved.
     """
-    if isinstance(problem_id, int):
-        return f"{problem_id:04d}-{slug}"
-    if problem_id.isdigit():
-        return f"{int(problem_id):04d}-{slug}"
-    return f"{problem_id}-{slug}"
+    safe_id = str(problem_id).strip()
+    safe_slug = str(slug).strip().lower()
+    if platform == "geeksforgeeks" and safe_id == safe_slug:
+        return safe_slug
+    if isinstance(problem_id, int) or safe_id.isdigit():
+        return f"{int(safe_id):04d}-{safe_slug}"
+    return f"{safe_id}-{safe_slug}"
 
 
 def build_solution_readme(sub: dict, solution_dir: Path | None = None) -> str:
@@ -162,7 +164,7 @@ def process_submission(sub: dict, dry_run: bool = False) -> bool:
     """
     problem = sub["problem"]
     platform = sub.get("platform", "leetcode")  # default to leetcode for backward compat
-    folder_name = slugify_folder(problem["id"], problem["slug"])
+    folder_name = slugify_folder(problem["id"], problem["slug"], platform)
     solution_dir = SOLUTIONS_DIR / platform / folder_name
     ext = get_extension(sub["language"])
     solution_file = solution_dir / f"solution.{ext}"
