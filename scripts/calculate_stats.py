@@ -1,16 +1,17 @@
 """
 calculate_stats.py
 ------------------
-Statistics engine for CodeStreak.
+Statistics engine for CodeStreak (multi-platform).
 
 Reads data/submissions.json and computes comprehensive statistics,
 writing results to data/statistics.json.
 
 Statistics computed:
-    - Total solved (unique problems)
+    - Total solved (unique problems across all platforms)
     - Easy / Medium / Hard counts
     - Problems per language
     - Problems per topic
+    - Problems per platform
     - Daily / weekly / monthly / yearly activity
     - First solved date
     - Latest solved date
@@ -92,26 +93,29 @@ def year_key(date_str: str) -> str:
 
 def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata") -> dict:
     """
-    Compute all statistics from a list of submission dicts.
+    Compute all statistics from a list of submission dicts (multi-platform aware).
     Uses tz_name for localizing timestamps to dates.
     Returns a statistics dict ready to be saved as JSON.
     """
     tz = pytz.timezone(tz_name)
 
-    # Deduplicate by problem slug (keep the first/earliest accepted per problem)
-    seen_slugs: dict[str, dict] = {}   # slug -> earliest submission
+    # Deduplicate by (platform, problem_slug) — same problem on different platforms counts separately
+    seen_keys: dict[str, dict] = {}   # "platform:slug" -> earliest submission
     for sub in sorted(submissions, key=lambda s: s["submitted_at"]):
+        platform = sub.get("platform", "leetcode")
         slug = sub["problem"]["slug"]
-        if slug not in seen_slugs:
-            seen_slugs[slug] = sub
+        key = f"{platform}:{slug}"
+        if key not in seen_keys:
+            seen_keys[key] = sub
 
-    unique_submissions = list(seen_slugs.values())
+    unique_submissions = list(seen_keys.values())
 
     # Counters
     total_solved = len(unique_submissions)
     by_difficulty: dict[str, int] = defaultdict(int)
     by_language:   dict[str, int] = defaultdict(int)
     by_topic:      dict[str, int] = defaultdict(int)
+    by_platform:   dict[str, int] = defaultdict(int)
     per_day:       dict[str, int] = defaultdict(int)
     per_week:      dict[str, int] = defaultdict(int)
     per_month:     dict[str, int] = defaultdict(int)
@@ -121,6 +125,9 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
     for sub in unique_submissions:
         diff = sub["problem"].get("difficulty", "Unknown").lower()
         by_difficulty[diff] += 1
+
+        platform = sub.get("platform", "leetcode")
+        by_platform[platform] += 1
 
         for topic in sub["problem"].get("topics", []):
             by_topic[topic] += 1
@@ -132,12 +139,13 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
         per_month[month_key(local_date)] += 1
         per_year[year_key(local_date)]   += 1
 
-    # For language distribution, count each unique (slug, language) solve
-    seen_lang_solves: set[tuple[str, str]] = set()
+    # For language distribution, count each unique (platform, slug, language) solve
+    seen_lang_solves: set[tuple[str, str, str]] = set()
     for sub in submissions:
+        platform = sub.get("platform", "leetcode")
         slug = sub["problem"]["slug"]
         lang = sub.get("language", "unknown").lower()
-        key = (slug, lang)
+        key = (platform, slug, lang)
         if key not in seen_lang_solves:
             seen_lang_solves.add(key)
             by_language[lang] += 1
@@ -152,6 +160,7 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
         "hard":   by_difficulty.get("hard",   0),
         "byLanguage": dict(sorted(by_language.items(), key=lambda x: x[1], reverse=True)),
         "byTopic":    dict(sorted(by_topic.items(),    key=lambda x: x[1], reverse=True)),
+        "byPlatform": dict(sorted(by_platform.items(), key=lambda x: x[1], reverse=True)),
         "perDay":     dict(sorted(per_day.items())),
         "perWeek":    dict(sorted(per_week.items())),
         "perMonth":   dict(sorted(per_month.items())),

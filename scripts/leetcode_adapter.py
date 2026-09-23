@@ -42,12 +42,13 @@ class Problem:
 
 @dataclass
 class Submission:
-    """Normalized LeetCode accepted submission."""
+    """Normalized accepted submission (multi-platform canonical schema)."""
     submission_id: str
     problem: Problem
     language: str            # e.g. "python3", "cpp", "java"
     status: str              # "Accepted" (we only store accepted ones)
     submitted_at: str        # ISO-8601 UTC string e.g. "2026-08-14T18:32:10Z"
+    platform: str = "leetcode"  # Source platform: "leetcode" | "codeforces" | "geeksforgeeks" | "codechef"
     code: str = ""
     runtime: Optional[str] = None          # e.g. "42 ms"
     memory: Optional[str] = None           # e.g. "18.2 MB"
@@ -303,6 +304,7 @@ class LeetCodeAdapter:
             language=lang,
             status="Accepted",
             submitted_at=submitted_at,
+            platform="leetcode",
             code=code,
             runtime=runtime,
             memory=memory,

@@ -25,6 +25,29 @@ repo_name: CodeStreak
 fetch_limit: 20
 
 # ──────────────────────────────────────────────────────────────
+# Multi-Platform Settings (Phase 1+)
+# ──────────────────────────────────────────────────────────────
+# Each platform can be individually enabled/disabled.
+# Set your handle/username for API-based platforms.
+platforms:
+  leetcode:
+    enabled: true
+    display_name: LeetCode
+    # handle: your_leetcode_username   # optional, for API-based fetching
+  codeforces:
+    enabled: false
+    display_name: Codeforces
+    handle: ""   # Set to your Codeforces handle to enable API sync
+  geeksforgeeks:
+    enabled: false
+    display_name: GeeksforGeeks
+    # Synced via browser extension
+  codechef:
+    enabled: false
+    display_name: CodeChef
+    # Synced via browser extension
+
+# ──────────────────────────────────────────────────────────────
 # AI layer (optional)
 # Set ai_enabled: true and provide OPENAI_API_KEY secret to enable
 # ──────────────────────────────────────────────────────────────

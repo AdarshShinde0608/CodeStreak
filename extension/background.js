@@ -111,10 +111,11 @@ async function handleAccepted(submission) {
   }
 
   // 2. Commit solution file & solution README
+  const platform    = submission.platform || "leetcode";
   const folderName = slugifyFolder(submission.problem.id, submission.problem.slug);
   const ext        = getExtension(submission.language);
-  const codePath   = `solutions/${folderName}/solution.${ext}`;
-  const readmePath = `solutions/${folderName}/README.md`;
+  const codePath   = `solutions/${platform}/${folderName}/solution.${ext}`;
+  const readmePath = `solutions/${platform}/${folderName}/README.md`;
 
   // Always write/update the solution file with the latest code for this language
   await github.upsertFile(
@@ -223,6 +224,7 @@ async function syncRecentSubmissions(limit = 50) {
     const normalized = {
       submission_id: sid,
       problem: problemMeta,
+      platform: "leetcode",
       language: lang,
       status: "Accepted",
       submitted_at: isoDate,
@@ -233,11 +235,12 @@ async function syncRecentSubmissions(limit = 50) {
       code: code,
     };
 
-    // Commit solution files to leetcode-journey
+    // Commit solution files to leetcode-journey (platform-scoped)
+    const platform = normalized.platform || "leetcode";
     const folderName = slugifyFolder(problemMeta.id, problemMeta.slug);
     const ext = getExtension(lang);
-    const codePath = `solutions/${folderName}/solution.${ext}`;
-    const readmePath = `solutions/${folderName}/README.md`;
+    const codePath = `solutions/${platform}/${folderName}/solution.${ext}`;
+    const readmePath = `solutions/${platform}/${folderName}/README.md`;
 
     try {
       // Write / update solution file

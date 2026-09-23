@@ -1,13 +1,13 @@
 """
 main.py
 -------
-Main orchestrator for CodeStreak sync pipeline.
+Main orchestrator for CodeStreak multi-platform sync pipeline.
 
 Runs the full pipeline in order:
-    1. Fetch new accepted submissions from LeetCode
-    2. Process each submission (save to solutions/, update DB)
-    3. Calculate statistics
-    4. Calculate streak
+    1. Fetch new accepted submissions (from enabled platforms)
+    2. Process each submission (save to solutions/<platform>/, update DB)
+    3. Calculate statistics (multi-platform aware)
+    4. Calculate streak (universal across all platforms)
     5. Update achievements
     6. Generate README dashboard
     7. Generate SVG charts
@@ -17,12 +17,12 @@ This script is called by the GitHub Actions sync workflow.
 Usage:
     python scripts/main.py [--dry-run]
 
-Environment variables required:
-    LEETCODE_SESSION       — LeetCode session cookie
-    LEETCODE_CSRF_TOKEN    — LeetCode CSRF token
+Environment variables required (LeetCode path):
+    LEETCODE_SESSION       -- LeetCode session cookie
+    LEETCODE_CSRF_TOKEN    -- LeetCode CSRF token
 
 Optional:
-    TARGET_DIR             — Override output directory for README (cross-repo mode)
+    TARGET_DIR             -- Override output directory for README (cross-repo mode)
 """
 
 from __future__ import annotations

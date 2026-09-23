@@ -4,14 +4,16 @@ process_submission.py
 Handles saving a new accepted submission to the repository.
 
 For each new submission:
-    1. Creates solutions/NNNN-slug/ folder
+    1. Creates solutions/<platform>/NNNN-slug/ folder  (CORE-01)
     2. Writes solution.<ext> (source code)
-    3. Writes solutions/NNNN-slug/README.md (auto-generated from metadata)
-    4. Appends the submission record to data/submissions.json
+    3. Writes solutions/<platform>/NNNN-slug/README.md (auto-generated from metadata)
+    4. Appends the submission record to data/submissions.json  (CORE-02)
+
+Platform values: "leetcode" | "codeforces" | "geeksforgeeks" | "codechef"
 
 Usage:
     Called by main.py with the list of new submission dicts from fetch_submissions.py
-    
+
     Can also be run standalone:
         python scripts/process_submission.py  # reads new_submissions.json from /tmp
 """
@@ -51,8 +53,18 @@ def slugify_folder(problem_id: int, slug: str) -> str:
 def build_solution_readme(sub: dict, solution_dir: Path | None = None) -> str:
     """Generate a README.md for a problem solution, including all available language solutions."""
     problem = sub["problem"]
+    platform = sub.get("platform", "leetcode")
     date_solved = sub["submitted_at"][:10]   # "2026-08-14"
     lang_display = sub["language"].title().replace("python3", "Python").replace("cpp", "C++")
+
+    # Platform display label and URL
+    platform_labels = {
+        "leetcode":     ("LeetCode",     problem.get("url", "")),
+        "codeforces":   ("Codeforces",   problem.get("url", "")),
+        "geeksforgeeks":("GeeksforGeeks",problem.get("url", "")),
+        "codechef":     ("CodeChef",     problem.get("url", "")),
+    }
+    plat_label, plat_url = platform_labels.get(platform, (platform.title(), problem.get("url", "")))
 
     # If multiple language files exist in the solution directory, list them all
     solutions_table = ""
@@ -88,17 +100,19 @@ def build_solution_readme(sub: dict, solution_dir: Path | None = None) -> str:
 
     topics = problem.get("topics", [])
     topics_line = ", ".join(topics) if topics else "—"
+    plat_link = f"[Link]({plat_url})" if plat_url else "—"
 
     return f"""# {problem['title']}
 
 | Field | Value |
 |-------|-------|
 | **Problem #** | {problem['id']} |
+| **Platform** | {plat_label} |
 | **Difficulty** | {problem['difficulty']} |
 | **Language** | {lang_display} |
 | **Topics** | {topics_line} |
 | **Date Solved** | {date_solved} |
-| **LeetCode** | [Link]({problem['url']}) |
+| **{plat_label}** | {plat_link} |
 {solutions_table}
 ## Approach
 
@@ -136,12 +150,14 @@ def save_submissions_db(submissions: list[dict]) -> None:
 def process_submission(sub: dict, dry_run: bool = False) -> bool:
     """
     Process a single submission.
-    Creates folder structure, writes/updates solution file for the specific language,
+    Creates platform-scoped folder structure (solutions/<platform>/NNNN-slug/),
+    writes/updates solution file for the specific language,
     and regenerates the problem README with latest metadata and solution links.
     """
     problem = sub["problem"]
+    platform = sub.get("platform", "leetcode")  # default to leetcode for backward compat
     folder_name = slugify_folder(problem["id"], problem["slug"])
-    solution_dir = SOLUTIONS_DIR / folder_name
+    solution_dir = SOLUTIONS_DIR / platform / folder_name
     ext = get_extension(sub["language"])
     solution_file = solution_dir / f"solution.{ext}"
     readme_file   = solution_dir / "README.md"
