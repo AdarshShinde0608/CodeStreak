@@ -46,6 +46,13 @@ DIFFICULTY_COLOURS = {
 
 LANG_COLOUR = "#58a6ff"
 
+PLATFORM_COLOURS = {
+    "leetcode":      "#f89f1b",
+    "codeforces":    "#1e4af6",
+    "geeksforgeeks": "#2ea043",
+    "codechef":      "#8b5cf6",
+}
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -201,6 +208,50 @@ def generate_languages_svg(by_language: dict[str, int], top_n: int = 6) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Platforms bar chart SVG
+# ──────────────────────────────────────────────────────────────────────────────
+
+def generate_platforms_svg(by_platform: dict[str, int]) -> str:
+    if not by_platform:
+        by_platform = {}
+
+    items = sorted(by_platform.items(), key=lambda x: x[1], reverse=True)
+    total = sum(v for _, v in items) or 1
+    BAR_WIDTH = 220
+    ROW_H = 30
+    height = len(items) * ROW_H + 40
+
+    rows = []
+    for i, (plat, value) in enumerate(items):
+        y = i * ROW_H + 30
+        bar_len = int(BAR_WIDTH * value / total)
+        pct = f"{value / total * 100:.1f}%"
+        # truncate or format platform name
+        label = plat[:7] if len(plat) > 7 else plat
+        if plat == "geeksforgeeks": label = "GFG"
+        elif plat == "codeforces": label = "CodeF"
+        elif plat == "codechef": label = "CodeC"
+        elif plat == "leetcode": label = "LeetC"
+            
+        color = PLATFORM_COLOURS.get(plat, "#8b949e")
+        rows.append(
+            f'  <text x="10" y="{y + 13}" font-size="11" fill="#c9d1d9" font-family="monospace">{label:<7}</text>\n'
+            f'  <rect x="70" y="{y}" width="{bar_len}" height="18" rx="3" fill="{color}"/>\n'
+            f'  <rect x="70" y="{y}" width="{BAR_WIDTH}" height="18" rx="3" fill="none" stroke="#30363d"/>\n'
+            f'  <text x="{70 + bar_len + 6}" y="{y + 13}" font-size="11" fill="#8b949e" font-family="monospace">{value} ({pct})</text>'
+        )
+
+    rows_svg = "\n".join(rows)
+    width = BAR_WIDTH + 160
+
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <rect width="{width}" height="{height}" fill="#0d1117" rx="6"/>
+  <text x="10" y="18" font-size="12" fill="#8b949e" font-family="monospace" font-weight="bold">Platform Distribution</text>
+{rows_svg}
+</svg>"""
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -230,6 +281,11 @@ def generate_all() -> None:
     lang_svg = generate_languages_svg(stats.get("byLanguage", {}))
     (ASSETS_DIR / "languages.svg").write_text(lang_svg, encoding="utf-8")
     logger.info("Generated languages.svg")
+    
+    # Platforms
+    plat_svg = generate_platforms_svg(stats.get("byPlatform", {}))
+    (ASSETS_DIR / "platforms.svg").write_text(plat_svg, encoding="utf-8")
+    logger.info("Generated platforms.svg")
 
 
 if __name__ == "__main__":

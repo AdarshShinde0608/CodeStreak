@@ -98,9 +98,9 @@ def section_header(stats: dict, streak: dict, github_username: str, repo_name: s
 
     return f"""<div align="center">
 
-# 🧠 LeetCode Journey
+# 🧠 Coding Journey
 
-*Automated progress tracker powered by [CodeStreak](https://github.com/{github_username}/{repo_name})*
+*Automated multi-platform progress tracker powered by [CodeStreak](https://github.com/{github_username}/{repo_name})*
 
 ---
 
@@ -162,6 +162,38 @@ def section_languages(stats: dict, top_n: int = 6) -> str:
 """
 
 
+def section_platforms(stats: dict) -> str:
+    by_plat = stats.get("byPlatform", {})
+    if not by_plat:
+        return ""
+
+    items  = sorted(by_plat.items(), key=lambda x: x[1], reverse=True)
+    total  = sum(v for _, v in items) or 1
+    
+    badge_map = {
+        "leetcode": "🟠 LeetCode",
+        "codeforces": "🔵 Codeforces",
+        "geeksforgeeks": "🟢 GFG",
+        "codechef": "🟣 CodeChef",
+    }
+    
+    rows   = "\n".join(
+        f"| {badge_map.get(plat, plat.title())} | {count} | {count / total * 100:.1f}% |"
+        for plat, count in items
+    )
+
+    return f"""## 🏰 Platforms
+
+| Platform | Problems | % |
+|:--------:|:--------:|:-:|
+{rows}
+
+![Platforms](assets/platforms.svg)
+
+---
+"""
+
+
 def section_topics(stats: dict, top_n: int = 10) -> str:
     by_topic = stats.get("byTopic", {})
     if not by_topic:
@@ -208,11 +240,19 @@ def section_streak(streak: dict) -> str:
 """
 
 
-def section_recent(submissions: list[dict], n: int = 10) -> str:
+def section_recent(submissions: list[dict], n: int = 15) -> str:
     if not submissions:
         return ""
 
     recent = sorted(submissions, key=lambda s: s["submitted_at"], reverse=True)[:n]
+    
+    platform_icons = {
+        "leetcode": "🔥",
+        "codeforces": "CF",
+        "geeksforgeeks": "GFG",
+        "codechef": "CC",
+    }
+    
     rows   = []
     for sub in recent:
         p    = sub["problem"]
@@ -220,13 +260,15 @@ def section_recent(submissions: list[dict], n: int = 10) -> str:
         badge = diff_badge(p.get("difficulty", ""))
         lang  = lang_display(sub.get("language", ""))
         link  = f"[{p['title']}]({p['url']})"
-        rows.append(f"| {p['id']} | {link} | {badge} {p.get('difficulty','')} | {lang} | {date} |")
+        plat  = sub.get("platform", "leetcode")
+        plat_icon = platform_icons.get(plat, plat[:2].upper())
+        rows.append(f"| {plat_icon} | {p['id']} | {link} | {badge} {p.get('difficulty','')} | {lang} | {date} |")
 
     rows_md = "\n".join(rows)
     return f"""## 🕐 Recent Submissions
 
-| # | Problem | Difficulty | Language | Date |
-|:-:|:-------:|:----------:|:--------:|:----:|
+| Platform | # | Problem | Difficulty | Language | Date |
+|:--------:|:-:|:-------:|:----------:|:--------:|:----:|
 {rows_md}
 
 ---
@@ -288,6 +330,7 @@ def generate_readme() -> str:
     parts = [
         section_header(stats, streak, github_username, repo_name),
         section_difficulty(stats),
+        section_platforms(stats),
         section_languages(stats),
         section_topics(stats),
         section_streak(streak),

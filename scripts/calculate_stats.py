@@ -44,6 +44,37 @@ CONFIG_FILE     = ROOT_DIR / "config.yml"
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
+TOPIC_MAP = {
+    # Data Structures
+    "hash-table": "Hash Table", "hashtable": "Hash Table", "hashing": "Hash Table", "maps": "Hash Table", "map": "Hash Table",
+    "array": "Arrays", "arrays": "Arrays",
+    "string": "Strings", "strings": "Strings",
+    "linked-list": "Linked List", "linked list": "Linked List", "linked lists": "Linked List",
+    "tree": "Trees", "trees": "Trees", "binary tree": "Trees",
+    "graph": "Graphs", "graphs": "Graphs", "graph theory": "Graphs",
+    "stack": "Stack", "stacks": "Stack",
+    "queue": "Queue", "queues": "Queue", "priority queue": "Priority Queue",
+    "heap": "Heap", "heaps": "Heap",
+    
+    # Algorithms
+    "dp": "Dynamic Programming", "dynamic programming": "Dynamic Programming", "dynamic-programming": "Dynamic Programming",
+    "math": "Mathematics", "mathematics": "Mathematics", "maths": "Mathematics", "number theory": "Mathematics",
+    "greedy": "Greedy", "greedy algorithms": "Greedy",
+    "dfs": "DFS/BFS", "bfs": "DFS/BFS", "depth-first search": "DFS/BFS", "breadth-first search": "DFS/BFS", "depth first search": "DFS/BFS",
+    "binary search": "Binary Search", "binary-search": "Binary Search",
+    "two pointers": "Two Pointers", "two-pointers": "Two Pointers",
+    "sorting": "Sorting", "sort": "Sorting",
+    "bit manipulation": "Bit Manipulation", "bit-manipulation": "Bit Manipulation", "bitmasks": "Bit Manipulation",
+    "sliding window": "Sliding Window", "sliding-window": "Sliding Window",
+    "backtracking": "Backtracking",
+    "divide and conquer": "Divide and Conquer", "divide-and-conquer": "Divide and Conquer",
+}
+
+def normalize_topic(topic: str) -> str:
+    """Normalize a platform-specific topic string to a canonical topic."""
+    t = topic.strip().lower()
+    return TOPIC_MAP.get(t, topic.strip().title())
+
 def load_config() -> dict:
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, "r") as f:
@@ -130,7 +161,8 @@ def calculate_statistics(submissions: list[dict], tz_name: str = "Asia/Kolkata")
         by_platform[platform] += 1
 
         for topic in sub["problem"].get("topics", []):
-            by_topic[topic] += 1
+            canonical_topic = normalize_topic(topic)
+            by_topic[canonical_topic] += 1
 
         local_date = to_local_date(sub["submitted_at"], tz)
         dates.append(local_date)

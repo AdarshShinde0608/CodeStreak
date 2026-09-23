@@ -1,19 +1,23 @@
 """
 calculate_streak.py
 -------------------
-Streak engine for CodeStreak.
+Universal streak engine for CodeStreak (multi-platform).
 
 Reads data/submissions.json and computes:
-    - Current streak (consecutive days up to today)
+    - Current streak (consecutive days up to today, across ALL platforms)
     - Longest streak (all-time)
-    - Daily activity map
+    - Daily activity map (by date, cumulative across all platforms)
+    - Per-platform activity maps
     - Total active days
     - Whether today's / this week's goal is met
+
+A day counts as active if ANY accepted submission was recorded across
+any enabled platform (LeetCode, Codeforces, GeeksforGeeks, CodeChef).
 
 Edge cases handled:
     - Multiple problems on one day (counts as 1 streak day)
     - Month / year / leap-year boundaries
-    - Timezone-aware date calculation
+    - Timezone-aware date calculation (from config.yml)
     - Missing days in the middle
     - No submissions
     - Future timestamps
@@ -71,12 +75,14 @@ def to_local_date(iso_str: str, tz: pytz.BaseTzInfo) -> date:
     return dt_local.date()
 
 
-def build_daily_activity(submissions: list[dict], tz: pytz.BaseTzInfo) -> dict[date, int]:
+def build_daily_activity(submissions: list[dict], tz: pytz.BaseTzInfo) -> tuple[dict[date, int], dict[str, dict[date, int]]]:
     """
-    Build a map of { local_date: problem_count } from submissions.
-    Counts unique problem slugs per day.
+    Build a map of { local_date: problem_count } from submissions,
+    and a nested map of { platform: { local_date: problem_count } }.
+    Counts unique problem slugs per day (globally and per platform).
     """
-    day_slugs: dict[date, set[str]] = defaultdict(set)
+    global_day_slugs: dict[date, set[str]] = defaultdict(set)
+    platform_day_slugs: dict[str, dict[date, set[str]]] = defaultdict(lambda: defaultdict(set))
 
     for sub in submissions:
         # Guard against future timestamps
@@ -89,9 +95,23 @@ def build_daily_activity(submissions: list[dict], tz: pytz.BaseTzInfo) -> dict[d
             continue
 
         local_d = to_local_date(sub["submitted_at"], tz)
-        day_slugs[local_d].add(sub["problem"]["slug"])
+        platform = sub.get("platform", "leetcode")
+        slug = sub["problem"]["slug"]
+        
+        # We prefix the slug with platform to ensure global uniqueness 
+        # (e.g. two-sum on LC vs two-sum on CodeChef)
+        global_slug = f"{platform}:{slug}"
 
-    return {d: len(slugs) for d, slugs in day_slugs.items()}
+        global_day_slugs[local_d].add(global_slug)
+        platform_day_slugs[platform][local_d].add(slug)
+
+    global_activity = {d: len(slugs) for d, slugs in global_day_slugs.items()}
+    platform_activity = {
+        plat: {d: len(slugs) for d, slugs in plat_days.items()}
+        for plat, plat_days in platform_day_slugs.items()
+    }
+
+    return global_activity, platform_activity
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -175,7 +195,7 @@ def calculate_streak(
     tz = pytz.timezone(tz_name)
     today = datetime.now(tz).date()
 
-    daily_activity = build_daily_activity(submissions, tz)
+    daily_activity, platform_activity = build_daily_activity(submissions, tz)
     active_dates = set(daily_activity.keys())
 
     # Current streak
@@ -202,6 +222,11 @@ def calculate_streak(
     )
     weekly_goal_met = weekly_count >= weekly_goal
 
+    platform_activity_iso = {
+        plat: {d.isoformat(): count for d, count in sorted(plat_days.items())}
+        for plat, plat_days in platform_activity.items()
+    }
+
     return {
         "currentStreak":   current_streak,
         "longestStreak":   longest,
@@ -210,6 +235,7 @@ def calculate_streak(
         "longestStreakStart": ls_start.isoformat() if ls_start else None,
         "longestStreakEnd":   ls_end.isoformat()   if ls_end   else None,
         "dailyActivity":   {d.isoformat(): count for d, count in sorted(daily_activity.items())},
+        "platformActivity": platform_activity_iso,
         "totalActiveDays": total_active,
         "todaySolved":     today_count,
         "dailyGoal":       daily_goal,
