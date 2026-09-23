@@ -47,7 +47,10 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://*.geeksforgeeks.org/problems/*"],
+      "matches": [
+        "https://geeksforgeeks.org/problems/*",
+        "https://*.geeksforgeeks.org/problems/*"
+      ],
       "js": ["gfg_content.js"],
       "run_at": "document_idle"
     },

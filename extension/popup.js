@@ -173,11 +173,37 @@ manualSyncBtn.addEventListener("click", async () => {
     return;
   }
 
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const isGfgPage = /https:\/\/(?:www\.)?geeksforgeeks\.org\/problems\//i.test(activeTab?.url || "");
+
   // UI loading state
   manualSyncBtn.disabled           = true;
   manualSyncBtn.innerHTML          = `<span class="btn-icon">⏳</span> Syncing…`;
   syncProgressBox.style.display    = "flex";
-  syncProgressText.textContent     = "Connecting to LeetCode API…";
+  syncProgressText.textContent     = isGfgPage
+    ? "Checking current GFG submission…"
+    : "Connecting to LeetCode API…";
+
+  if (isGfgPage) {
+    chrome.tabs.sendMessage(activeTab.id, { type: "SYNC_CURRENT_GFG" }, async (res) => {
+      manualSyncBtn.disabled  = false;
+      manualSyncBtn.innerHTML = `<span class="btn-icon">🔄</span> Scan & Sync`;
+      syncProgressBox.style.display = "none";
+
+      if (chrome.runtime.lastError || !res?.ok) {
+        const connectionError = chrome.runtime.lastError?.message?.includes("Receiving end does not exist");
+        const errMsg = res?.error || (connectionError
+          ? "GFG page connection unavailable. Reload the GFG problem page and try again."
+          : chrome.runtime.lastError?.message || "GFG sync failed");
+        showToast(`❌ ${errMsg}`, "error");
+        return;
+      }
+
+      showToast(res.accepted ? "🎉 GFG submission sent for sync!" : "✅ No accepted GFG submission found", res.accepted ? "success" : "info");
+      if (res.accepted) await loadRecentActivity();
+    });
+    return;
+  }
 
   chrome.runtime.sendMessage({ type: "SYNC_RECENT_SUBMISSIONS", limit: 50 }, async (res) => {
     manualSyncBtn.disabled  = false;

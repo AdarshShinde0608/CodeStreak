@@ -21,6 +21,7 @@
 
   const _processedKeys = new Set();
   let _lastScan = 0;
+  let _lastManualSync = 0;
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@
 
   // ── Main extraction ───────────────────────────────────────────────────────
 
-  function handleGfgAccepted() {
+  function handleGfgAccepted(force = false) {
     const url  = window.location.href;
     const slug = extractGfgSlug(url);
     if (!slug) return;
@@ -118,7 +119,7 @@
     const key = `gfg:${slug}:${Date.now()}`;
     // Debounce: only fire once per 5 seconds per slug
     const dedupKey = `gfg:${slug}`;
-    if (_processedKeys.has(dedupKey)) return;
+    if (_processedKeys.has(dedupKey) && !force) return false;
     _processedKeys.add(dedupKey);
     setTimeout(() => _processedKeys.delete(dedupKey), 5000);
 
@@ -175,7 +176,27 @@
         }
       }
     );
+    return true;
   }
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type !== "SYNC_CURRENT_GFG") return false;
+
+    if (!isGfgAccepted()) {
+      sendResponse({ ok: true, accepted: false });
+      return false;
+    }
+
+    const now = Date.now();
+    if (now - _lastManualSync < 5000) {
+      sendResponse({ ok: false, error: "Please wait a few seconds before syncing this GFG submission again." });
+      return false;
+    }
+
+    _lastManualSync = now;
+    sendResponse({ ok: true, accepted: handleGfgAccepted(true) });
+    return false;
+  });
 
   // ── MutationObserver ──────────────────────────────────────────────────────
 

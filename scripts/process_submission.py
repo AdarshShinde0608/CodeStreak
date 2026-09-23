@@ -42,12 +42,18 @@ SUBMISSIONS_DB = ROOT_DIR / "data" / "submissions.json"
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 
-def slugify_folder(problem_id: int, slug: str) -> str:
+def slugify_folder(problem_id: int | str, slug: str) -> str:
     """
-    Convert a problem id + slug into a zero-padded folder name.
-    e.g. (1, "two-sum")  ->  "0001-two-sum"
+    Convert a problem id + slug into a stable folder name.
+
+    Numeric IDs retain the original LeetCode zero-padding convention, while
+    platform-specific IDs such as Codeforces' ``1234A`` are preserved.
     """
-    return f"{problem_id:04d}-{slug}"
+    if isinstance(problem_id, int):
+        return f"{problem_id:04d}-{slug}"
+    if problem_id.isdigit():
+        return f"{int(problem_id):04d}-{slug}"
+    return f"{problem_id}-{slug}"
 
 
 def build_solution_readme(sub: dict, solution_dir: Path | None = None) -> str:
